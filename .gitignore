@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment — NEVER commit real .env files
+.env
+.env.local
+.env.production
+.env.staging
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Puppeteer downloaded browsers
+.local-chromium/
+.cache/puppeteer/
+
+# Temporary
+tmp/
+temp/
