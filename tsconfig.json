@@ -19,6 +19,7 @@
     "sourceMap": true,
     "incremental": true,
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
