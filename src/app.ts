@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -49,7 +49,7 @@ export const buildApp = (): FastifyInstance => {
 		});
 	});
 
-	app.setErrorHandler((error, request, reply) => {
+	app.setErrorHandler((error: FastifyError, request, reply) => {
 		request.log.error({ err: error }, 'Unhandled error');
 		const statusCode = error.statusCode ?? 500;
 
