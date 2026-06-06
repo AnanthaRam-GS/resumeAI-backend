@@ -1,8 +1,10 @@
-import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { env } from './config/env.js';
+import { AppError } from './utils/errors.js';
+import { error as errorResponse } from './utils/response.js';
 
 const buildLoggerOptions = () => {
 	if (env.NODE_ENV === 'production') {
@@ -50,14 +52,14 @@ export const buildApp = (): FastifyInstance => {
 		});
 	});
 
-	app.setErrorHandler((error: FastifyError, request, reply) => {
+	app.setErrorHandler((error, request, reply) => {
 		request.log.error({ err: error }, 'Unhandled error');
-		const statusCode = error.statusCode ?? 500;
+		if (error instanceof AppError) {
+			reply.status(error.statusCode).send(errorResponse(error.message));
+			return;
+		}
 
-		reply.status(statusCode).send({
-			success: false,
-			message: statusCode === 500 ? 'Internal server error' : error.message,
-		});
+		reply.status(500).send(errorResponse('Internal server error'));
 	});
 
 	return app;
