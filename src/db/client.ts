@@ -1,4 +1,7 @@
+import { config } from 'dotenv';
 import { Pool } from 'pg';
+
+config({ quiet: true });
 
 let poolInstance: Pool | null = null;
 
