@@ -1,8 +1,9 @@
 import { pool } from './client.js';
 import { runMigrations } from './migrate.js';
+import { env } from '../config/env.js';
 
 export const resetDatabase = async () => {
-	if (process.env.NODE_ENV === 'production') {
+	if (env.NODE_ENV === 'production') {
 		throw new Error('Database reset is not allowed in production');
 	}
 
