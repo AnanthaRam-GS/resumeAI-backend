@@ -2,9 +2,10 @@ import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
+import { env } from './config/env.js';
 
 const buildLoggerOptions = () => {
-	if (process.env.NODE_ENV === 'production') {
+	if (env.NODE_ENV === 'production') {
 		return { level: 'info' } as const;
 	}
 
@@ -35,8 +36,8 @@ export const buildApp = (): FastifyInstance => {
 	app.register(cors, { origin: true });
 	app.register(helmet);
 	app.register(rateLimit, {
-		max: Number(process.env.RATE_LIMIT_MAX ?? 100),
-		timeWindow: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60000),
+		max: 100,
+		timeWindow: 60000,
 	});
 
 	registerRoutes(app);
