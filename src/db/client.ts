@@ -1,23 +1,11 @@
-import { config } from 'dotenv';
 import { Pool } from 'pg';
-
-config({ quiet: true });
+import { env } from '../config/env.js';
 
 let poolInstance: Pool | null = null;
 
 const createPool = () => {
-	const databaseUrl = process.env.DATABASE_URL;
-
-	if (!databaseUrl) {
-		throw new Error('DATABASE_URL is required to initialize the database pool');
-	}
-
 	const pool = new Pool({
-		connectionString: databaseUrl,
-		ssl:
-			process.env.DATABASE_SSL === 'true'
-				? { rejectUnauthorized: false }
-				: undefined,
+		connectionString: env.DATABASE_URL,
 	});
 
 	pool.on('error', (error) => {
