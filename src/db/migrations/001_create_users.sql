@@ -2,50 +2,28 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 DO $$
 BEGIN
-	CREATE TYPE resumeai_user_status AS ENUM ('active', 'disabled');
+	CREATE TYPE resumeai_portfolio_item_type AS ENUM ('project', 'experience', 'education', 'skill', 'certification');
 EXCEPTION
 	WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$
 BEGIN
-	CREATE TYPE resumeai_portfolio_item_type AS ENUM (
-		'experience',
-		'project',
-		'education',
-		'certification',
-		'award',
-		'skill',
-		'volunteer',
-		'publication',
-		'other'
-	);
+	CREATE TYPE resumeai_portfolio_item_source AS ENUM ('manual', 'upload', 'github');
 EXCEPTION
 	WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$
 BEGIN
-	CREATE TYPE resumeai_job_target_status AS ENUM ('draft', 'active', 'archived');
-EXCEPTION
-	WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$
-BEGIN
-	CREATE TYPE resumeai_generation_job_type AS ENUM ('resume', 'cover_letter', 'gap_analysis');
-EXCEPTION
-	WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$
-BEGIN
-	CREATE TYPE resumeai_generation_job_status AS ENUM (
+	CREATE TYPE resumeai_resume_generation_job_status AS ENUM (
 		'queued',
-		'processing',
+		'analyzing_jd',
+		'scoring_portfolio',
+		'generating_content',
+		'rendering_pdf',
 		'completed',
-		'failed',
-		'cancelled'
+		'failed'
 	);
 EXCEPTION
 	WHEN duplicate_object THEN NULL;
@@ -53,21 +31,7 @@ END $$;
 
 DO $$
 BEGIN
-	CREATE TYPE resumeai_resume_version_status AS ENUM ('draft', 'generated', 'published', 'archived');
-EXCEPTION
-	WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$
-BEGIN
-	CREATE TYPE resumeai_cover_letter_status AS ENUM ('draft', 'generated', 'sent', 'archived');
-EXCEPTION
-	WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$
-BEGIN
-	CREATE TYPE resumeai_gap_analysis_status AS ENUM ('pending', 'completed', 'failed');
+	CREATE TYPE resumeai_resume_version_status AS ENUM ('draft', 'submitted', 'archived');
 EXCEPTION
 	WHEN duplicate_object THEN NULL;
 END $$;
@@ -84,19 +48,22 @@ $$;
 
 CREATE TABLE IF NOT EXISTS users (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	full_name TEXT NOT NULL,
 	email TEXT NOT NULL UNIQUE,
 	password_hash TEXT NOT NULL,
-	full_name TEXT NOT NULL,
-	headline TEXT,
-	timezone TEXT,
-	status resumeai_user_status NOT NULL DEFAULT 'active',
-	email_verified_at TIMESTAMPTZ,
-	last_login_at TIMESTAMPTZ,
+	university TEXT,
+	graduation_year SMALLINT,
+	target_role_category TEXT,
+	career_goal TEXT,
+	onboarding_step SMALLINT NOT NULL DEFAULT 1,
+	onboarding_complete BOOLEAN NOT NULL DEFAULT FALSE,
+	profile_photo_s3_key TEXT,
+	notif_gap_digest BOOLEAN NOT NULL DEFAULT TRUE,
+	notif_gen_complete BOOLEAN NOT NULL DEFAULT FALSE,
+	notif_sync_complete BOOLEAN NOT NULL DEFAULT TRUE,
 	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS users_status_idx ON users (status);
 
 DROP TRIGGER IF EXISTS users_set_updated_at ON users;
 CREATE TRIGGER users_set_updated_at

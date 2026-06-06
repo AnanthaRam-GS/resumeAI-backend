@@ -1,26 +1,17 @@
 CREATE TABLE IF NOT EXISTS cover_letters (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-	job_target_id UUID REFERENCES job_targets(id) ON DELETE SET NULL,
-	resume_version_id UUID REFERENCES resume_versions(id) ON DELETE SET NULL,
-	generation_job_id UUID REFERENCES generation_jobs(id) ON DELETE SET NULL,
-	status resumeai_cover_letter_status NOT NULL DEFAULT 'draft',
-	title TEXT,
-	subject TEXT,
-	content TEXT NOT NULL DEFAULT '',
-	content_data JSONB NOT NULL DEFAULT '{}'::jsonb,
-	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-	UNIQUE (resume_version_id)
+	resume_version_id UUID NOT NULL REFERENCES resume_versions(id) ON DELETE CASCADE,
+	why_company TEXT,
+	tone TEXT NOT NULL DEFAULT 'balanced',
+	highlight_note TEXT,
+	content_text TEXT,
+	pdf_s3_key TEXT,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS cover_letters_user_id_idx ON cover_letters (user_id);
-CREATE INDEX IF NOT EXISTS cover_letters_job_target_id_idx ON cover_letters (job_target_id);
 CREATE INDEX IF NOT EXISTS cover_letters_resume_version_id_idx ON cover_letters (resume_version_id);
-CREATE INDEX IF NOT EXISTS cover_letters_status_idx ON cover_letters (status);
 
-DROP TRIGGER IF EXISTS cover_letters_set_updated_at ON cover_letters;
-CREATE TRIGGER cover_letters_set_updated_at
-BEFORE UPDATE ON cover_letters
-FOR EACH ROW
-EXECUTE FUNCTION resumeai_set_updated_at();
+ALTER TABLE resume_versions
+	ADD CONSTRAINT resume_versions_cover_letter_id_fkey
+	FOREIGN KEY (cover_letter_id) REFERENCES cover_letters(id) ON DELETE SET NULL;
