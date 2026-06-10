@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { env } from './config/env.js';
+import { authRoutes } from './modules/auth/index.js';
 import { AppError } from './utils/errors.js';
 import { error as errorResponse } from './utils/response.js';
 
@@ -30,6 +31,8 @@ const registerRoutes = (app: FastifyInstance) => {
 			message: 'ResumeAI Backend is running',
 		};
 	});
+
+	app.register(authRoutes, { prefix: '/auth' });
 };
 
 export const buildApp = (): FastifyInstance => {
