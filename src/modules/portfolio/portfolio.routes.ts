@@ -1,13 +1,20 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { auth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
-import { createItem, getItemById, listItems } from './portfolio.controller.js';
+import {
+	createItem,
+	getItemById,
+	listItems,
+	updateItem,
+} from './portfolio.controller.js';
 import {
 	createPortfolioItemSchema,
 	type PortfolioItemParams,
 	type PortfolioItemQuery,
+	type UpdatePortfolioItemInput,
 	portfolioItemParamsSchema,
 	portfolioItemQuerySchema,
+	updatePortfolioItemSchema,
 	type CreatePortfolioItemInput,
 } from './portfolio.schema.js';
 
@@ -49,5 +56,19 @@ export const portfolioRoutes: FastifyPluginAsync = async (app) => {
 			],
 		},
 		createItem,
+	);
+
+	app.patch<{ Params: PortfolioItemParams; Body: UpdatePortfolioItemInput }>(
+		'/items/:id',
+		{
+			preHandler: [
+				auth,
+				validate({
+					params: portfolioItemParamsSchema,
+					body: updatePortfolioItemSchema,
+				}),
+			],
+		},
+		updateItem,
 	);
 };
