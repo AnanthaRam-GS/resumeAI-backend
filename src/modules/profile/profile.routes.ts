@@ -4,12 +4,15 @@ import { validate } from '../../middleware/validate.js';
 import {
 	getCurrentProfile,
 	updateCareerGoalDetails,
+	updateOnboardingProgress,
 	updatePersonalProfileDetails,
 } from './profile.controller.js';
 import {
 	type UpdateCareerGoalInput,
+	type UpdateOnboardingStepInput,
 	type UpdatePersonalProfileInput,
 	updateCareerGoalSchema,
+	updateOnboardingStepSchema,
 	updatePersonalProfileSchema,
 } from './profile.schema.js';
 
@@ -46,5 +49,18 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
 			],
 		},
 		updateCareerGoalDetails,
+	);
+
+	app.patch<{ Body: UpdateOnboardingStepInput }>(
+		'/onboarding-step',
+		{
+			preHandler: [
+				auth,
+				validate({
+					body: updateOnboardingStepSchema,
+				}),
+			],
+		},
+		updateOnboardingProgress,
 	);
 };

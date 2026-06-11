@@ -2,11 +2,13 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { success } from '../../utils/response.js';
 import type {
 	UpdateCareerGoalInput,
+	UpdateOnboardingStepInput,
 	UpdatePersonalProfileInput,
 } from './profile.schema.js';
 import {
 	getProfile,
 	updateCareerGoal,
+	updateOnboardingStep,
 	updatePersonalProfile,
 } from './profile.service.js';
 
@@ -60,6 +62,25 @@ export const updateCareerGoalDetails = async (
 				profile,
 			},
 			'Career goal updated',
+		),
+	);
+};
+
+export const updateOnboardingProgress = async (
+	request: FastifyRequest,
+	reply: FastifyReply,
+) => {
+	const profile = await updateOnboardingStep(
+		request.user.userId,
+		request.body as UpdateOnboardingStepInput,
+	);
+
+	return reply.send(
+		success(
+			{
+				profile,
+			},
+			'Onboarding progress updated',
 		),
 	);
 };
