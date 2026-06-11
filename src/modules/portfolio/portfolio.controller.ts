@@ -8,6 +8,7 @@ import type {
 } from './portfolio.schema.js';
 import {
 	createPortfolioItem,
+	deletePortfolioItem,
 	getPortfolioItemById,
 	listPortfolioItems,
 	updatePortfolioItem,
@@ -76,4 +77,16 @@ export const updateItem = async (request: FastifyRequest, reply: FastifyReply) =
 			'Portfolio item updated',
 		),
 	);
+};
+
+export const deleteItem = async (request: FastifyRequest, reply: FastifyReply) => {
+	await deletePortfolioItem(
+		request.user.userId,
+		(request.params as PortfolioItemParams).id,
+	);
+
+	return reply.send({
+		success: true,
+		message: 'Portfolio item deleted',
+	});
 };

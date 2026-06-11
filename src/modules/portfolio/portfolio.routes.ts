@@ -3,6 +3,7 @@ import { auth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import {
 	createItem,
+	deleteItem,
 	getItemById,
 	listItems,
 	updateItem,
@@ -70,5 +71,18 @@ export const portfolioRoutes: FastifyPluginAsync = async (app) => {
 			],
 		},
 		updateItem,
+	);
+
+	app.delete<{ Params: PortfolioItemParams }>(
+		'/items/:id',
+		{
+			preHandler: [
+				auth,
+				validate({
+					params: portfolioItemParamsSchema,
+				}),
+			],
+		},
+		deleteItem,
 	);
 };
