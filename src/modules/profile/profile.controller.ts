@@ -1,7 +1,14 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { success } from '../../utils/response.js';
-import type { UpdatePersonalProfileInput } from './profile.schema.js';
-import { getProfile, updatePersonalProfile } from './profile.service.js';
+import type {
+	UpdateCareerGoalInput,
+	UpdatePersonalProfileInput,
+} from './profile.schema.js';
+import {
+	getProfile,
+	updateCareerGoal,
+	updatePersonalProfile,
+} from './profile.service.js';
 
 export const getCurrentProfile = async (
 	request: FastifyRequest,
@@ -34,6 +41,25 @@ export const updatePersonalProfileDetails = async (
 				profile,
 			},
 			'Personal profile updated',
+		),
+	);
+};
+
+export const updateCareerGoalDetails = async (
+	request: FastifyRequest,
+	reply: FastifyReply,
+) => {
+	const profile = await updateCareerGoal(
+		request.user.userId,
+		request.body as UpdateCareerGoalInput,
+	);
+
+	return reply.send(
+		success(
+			{
+				profile,
+			},
+			'Career goal updated',
 		),
 	);
 };
