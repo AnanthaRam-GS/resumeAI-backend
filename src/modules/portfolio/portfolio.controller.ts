@@ -2,9 +2,14 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { success } from '../../utils/response.js';
 import type {
 	CreatePortfolioItemInput,
+	PortfolioItemParams,
 	PortfolioItemQuery,
 } from './portfolio.schema.js';
-import { createPortfolioItem, listPortfolioItems } from './portfolio.service.js';
+import {
+	createPortfolioItem,
+	getPortfolioItemById,
+	listPortfolioItems,
+} from './portfolio.service.js';
 
 export const createItem = async (request: FastifyRequest, reply: FastifyReply) => {
 	const item = await createPortfolioItem(
@@ -34,6 +39,22 @@ export const listItems = async (request: FastifyRequest, reply: FastifyReply) =>
 				items,
 			},
 			'Portfolio items retrieved',
+		),
+	);
+};
+
+export const getItemById = async (request: FastifyRequest, reply: FastifyReply) => {
+	const item = await getPortfolioItemById(
+		request.user.userId,
+		(request.params as PortfolioItemParams).id,
+	);
+
+	return reply.send(
+		success(
+			{
+				item,
+			},
+			'Portfolio item retrieved',
 		),
 	);
 };
