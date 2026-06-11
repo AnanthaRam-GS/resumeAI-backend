@@ -21,6 +21,10 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run tests/integration",
     "test:unit": "vitest run tests/unit",
+    "db:local:setup": "bash scripts/setup-local-postgres.sh",
+    "db:local:connect": "psql postgresql://resumeai:resumeai_password@localhost:5432/resumeai_dev",
+    "db:test:connect": "psql postgresql://resumeai:resumeai_password@localhost:5432/resumeai_test",
+    "db:check": "tsx scripts/check-db-connection.ts",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:reset": "tsx src/db/reset.ts"
   },
