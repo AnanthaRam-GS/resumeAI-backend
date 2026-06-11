@@ -6,6 +6,7 @@ import type {
 	UpdatePersonalProfileInput,
 } from './profile.schema.js';
 import {
+	getProfileCompleteness,
 	getProfile,
 	updateCareerGoal,
 	updateOnboardingStep,
@@ -81,6 +82,22 @@ export const updateOnboardingProgress = async (
 				profile,
 			},
 			'Onboarding progress updated',
+		),
+	);
+};
+
+export const getProfileCompletenessSummary = async (
+	request: FastifyRequest,
+	reply: FastifyReply,
+) => {
+	const completeness = await getProfileCompleteness(request.user.userId);
+
+	return reply.send(
+		success(
+			{
+				completeness,
+			},
+			'Profile completeness calculated',
 		),
 	);
 };

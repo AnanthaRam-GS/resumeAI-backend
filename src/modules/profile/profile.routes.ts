@@ -3,6 +3,7 @@ import { auth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import {
 	getCurrentProfile,
+	getProfileCompletenessSummary,
 	updateCareerGoalDetails,
 	updateOnboardingProgress,
 	updatePersonalProfileDetails,
@@ -23,6 +24,14 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
 			preHandler: auth,
 		},
 		getCurrentProfile,
+	);
+
+	app.get(
+		'/completeness',
+		{
+			preHandler: auth,
+		},
+		getProfileCompletenessSummary,
 	);
 
 	app.patch<{ Body: UpdatePersonalProfileInput }>(
