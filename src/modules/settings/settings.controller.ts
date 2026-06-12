@@ -2,11 +2,13 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { success } from '../../utils/response.js';
 import type {
 	UpdateNotificationSettingsInput,
+	UpdateSettingsCareerGoalInput,
 	UpdateSettingsProfileInput,
 } from './settings.schema.js';
 import { getSettings } from './settings.service.js';
 import {
 	updateNotificationSettings,
+	updateSettingsCareerGoal,
 	updateSettingsProfile,
 } from './settings.service.js';
 
@@ -60,6 +62,25 @@ export const updateProfileSettings = async (
 				settings,
 			},
 			'Profile settings updated',
+		),
+	);
+};
+
+export const updateCareerGoalSettings = async (
+	request: FastifyRequest,
+	reply: FastifyReply,
+) => {
+	const settings = await updateSettingsCareerGoal(
+		request.user.userId,
+		request.body as UpdateSettingsCareerGoalInput,
+	);
+
+	return reply.send(
+		success(
+			{
+				settings,
+			},
+			'Career goal updated',
 		),
 	);
 };
