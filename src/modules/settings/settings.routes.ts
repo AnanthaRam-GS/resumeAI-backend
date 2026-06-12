@@ -2,15 +2,18 @@ import type { FastifyPluginAsync } from 'fastify';
 import { auth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import {
+	deleteSettingsAccount,
 	getCurrentSettings,
 	updateCareerGoalSettings,
 	updateProfileSettings,
 	updateSettingsNotifications,
 } from './settings.controller.js';
 import {
+	type DeleteAccountInput,
 	type UpdateNotificationSettingsInput,
 	type UpdateSettingsCareerGoalInput,
 	type UpdateSettingsProfileInput,
+	deleteAccountSchema,
 	updateSettingsCareerGoalSchema,
 	updateNotificationSettingsSchema,
 	updateSettingsProfileSchema,
@@ -62,5 +65,18 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
 			],
 		},
 		updateCareerGoalSettings,
+	);
+
+	app.delete<{ Body: DeleteAccountInput }>(
+		'/account',
+		{
+			preHandler: [
+				auth,
+				validate({
+					body: deleteAccountSchema,
+				}),
+			],
+		},
+		deleteSettingsAccount,
 	);
 };

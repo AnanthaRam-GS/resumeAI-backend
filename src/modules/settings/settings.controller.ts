@@ -1,12 +1,14 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { success } from '../../utils/response.js';
 import type {
+	DeleteAccountInput,
 	UpdateNotificationSettingsInput,
 	UpdateSettingsCareerGoalInput,
 	UpdateSettingsProfileInput,
 } from './settings.schema.js';
 import { getSettings } from './settings.service.js';
 import {
+	deleteAccount,
 	updateNotificationSettings,
 	updateSettingsCareerGoal,
 	updateSettingsProfile,
@@ -83,4 +85,18 @@ export const updateCareerGoalSettings = async (
 			'Career goal updated',
 		),
 	);
+};
+
+export const deleteSettingsAccount = async (
+	request: FastifyRequest,
+	reply: FastifyReply,
+) => {
+	const { password } = request.body as DeleteAccountInput;
+
+	await deleteAccount(request.user.userId, password);
+
+	return reply.send({
+		success: true,
+		message: 'Account deleted',
+	});
 };
