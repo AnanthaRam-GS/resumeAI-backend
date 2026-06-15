@@ -7,6 +7,9 @@ import { authRoutes } from './modules/auth/index.js';
 import { portfolioRoutes } from './modules/portfolio/index.js';
 import { profileRoutes } from './modules/profile/index.js';
 import { settingsRoutes } from './modules/settings/index.js';
+import { resumeRoutes } from './modules/resume/index.js';
+import { coverLetterRoutes } from './modules/cover-letter/index.js';
+import { analyticsRoutes } from './modules/analytics/index.js';
 import { AppError } from './utils/errors.js';
 import { error as errorResponse } from './utils/response.js';
 
@@ -39,6 +42,9 @@ const registerRoutes = (app: FastifyInstance) => {
 	app.register(portfolioRoutes, { prefix: '/portfolio' });
 	app.register(profileRoutes, { prefix: '/profile' });
 	app.register(settingsRoutes, { prefix: '/settings' });
+	app.register(resumeRoutes, { prefix: '/resume' });
+	app.register(coverLetterRoutes, { prefix: '/resume' });
+	app.register(analyticsRoutes, { prefix: '/analytics' });
 };
 
 export const buildApp = (): FastifyInstance => {
