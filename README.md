@@ -1,130 +1,366 @@
-# ResumeAI
+# ResumeAI Backend
 
-ResumeAI is an AI-assisted resume and cover letter platform designed for university students and early-career candidates who need to tailor application materials quickly, consistently, and with stronger ATS alignment.
+AI-assisted resume, cover letter, portfolio, and career-gap tooling for students and early-career candidates.
 
-This repository currently contains the **backend codebase** for the platform, plus the planning and architecture documents for the **full ResumeAI product**, including the planned frontend application, browser extension, AI orchestration pipeline, analytics, cover letter generation, and gap analysis features.
+```text
+Status: Backend MVP in progress
+Stack: Fastify + TypeScript + PostgreSQL + Zod + AI integrations
+Runtime: Node.js 20+ / pnpm 9+
+```
 
-## Product Vision
+ResumeAI helps users turn their profile, projects, experience, skills, and target job descriptions into stronger application materials. This repository contains the backend API and product planning documents for the larger ResumeAI platform.
 
-ResumeAI is intended to help a user:
+## Contents
 
-- build a structured professional profile
-- centralize projects, experience, education, certifications, and skills
-- import portfolio data from documents and GitHub
-- analyze a job description
-- select the most relevant portfolio signals
-- generate ATS-aware resume content and PDF outputs
-- generate cover letters
-- surface career gaps and improvement recommendations
+- [What This Repo Contains](#what-this-repo-contains)
+- [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Database Setup](#database-setup)
+- [API Overview](#api-overview)
+- [Project Structure](#project-structure)
+- [Scripts](#scripts)
+- [Testing](#testing)
+- [Architecture](#architecture)
+- [Roadmap](#roadmap)
 
-The long-term product scope is broader than the currently wired backend API. The planning documents in this repository define the full system direction.
+## What This Repo Contains
 
-## Repository Scope
+### Active backend surface
 
-This repo is currently a **backend-first implementation** built with Fastify, PostgreSQL, TypeScript, and AI service integrations.
+| Area | Status | Notes |
+| --- | --- | --- |
+| Health check | Ready | `GET /health` |
+| Auth | Ready | Register, login, current user |
+| Profile | Ready | Personal info, career goal, onboarding |
+| Portfolio | Ready | CRUD for portfolio items |
+| Settings | Ready | Account/profile/settings updates |
+| Database migrations | Ready | SQL migrations under `src/db/migrations` |
+| Unit tests | Ready | Core implemented modules covered |
 
-Today, the repository includes:
+### In progress / planned surface
 
-- Fastify API foundation
-- PostgreSQL schema and migration runner
-- local PostgreSQL workflow
-- Docker Compose PostgreSQL workflow
-- AWS S3 storage utility
-- authentication module
-- profile and onboarding module
-- portfolio CRUD module
-- settings module
-- AI-related service scaffolding and domain services
-- resume, documents, cover-letter, and analytics module code in various stages of implementation
-- unit test coverage for implemented core backend modules
+| Area | Status | Notes |
+| --- | --- | --- |
+| Resume generation | In progress | Services, routes, orchestration scaffolding exist |
+| Cover letters | In progress | Module code exists |
+| Documents | In progress | Parsing and upload-oriented services exist |
+| Analytics | In progress | ATS and gap-analysis services exist |
+| Frontend app | Planned | Described in planning documents |
+| Browser extension | Planned | Intended for job description capture |
 
-Planned but not fully represented as runnable code in this repository:
+## Quick Start
 
-- Next.js frontend application
-- browser extension for job description capture
-- full async multi-agent orchestration and production deployment topology from the complete blueprint
+From the backend directory:
 
-## Planning Documents
+```bash
+pnpm install
+cp .env.example .env
+cp .env.test.example .env.test
+pnpm db:migrate
+pnpm dev
+```
 
-The two primary references for this project are:
+The API starts on the port configured in `.env`.
 
-- [documents/ResumeAI_Blueprint.md](./documents/ResumeAI_Blueprint.md)
-- [documents/ResumeAI__MVP_Build_Plan.md](./documents/ResumeAI__MVP_Build_Plan.md)
+```bash
+curl http://localhost:3000/health
+```
 
-They serve different purposes:
+Expected shape:
 
-- `ResumeAI_Blueprint.md` describes the **complete product vision**, end-to-end user flow, full technology stack, AI agent design, future frontend and extension scope, infrastructure direction, and engineering work split.
-- `ResumeAI__MVP_Build_Plan.md` translates that broader vision into a **backend implementation plan**, database design, phased delivery model, and backend folder/module conventions.
+```json
+{
+  "status": "ok"
+}
+```
 
-## Current Implementation Status
+<details>
+<summary><strong>Try the API locally</strong></summary>
 
-### Implemented and actively wired
+Register a user:
 
-- `GET /health`
-- auth routes under `/auth`
-- profile routes under `/profile`
-- portfolio routes under `/portfolio`
-- settings routes under `/settings`
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "student@example.com",
+    "password": "password123",
+    "firstName": "Student",
+    "lastName": "User"
+  }'
+```
 
-### Core completed backend areas
+Sign in:
 
-- repository and Fastify scaffold
-- environment validation
-- shared middleware
-- PostgreSQL connection layer
-- SQL migrations and reset workflow
-- local PostgreSQL setup
-- Docker Compose PostgreSQL setup
-- S3 storage service
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "student@example.com",
+    "password": "password123"
+  }'
+```
+
+Use the returned token for protected routes:
+
+```bash
+curl http://localhost:3000/profile/me \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+</details>
+
+<details>
+<summary><strong>Recommended development loop</strong></summary>
+
+```bash
+pnpm type-check
+pnpm lint
+pnpm test:unit
+pnpm dev
+```
+
+Use this loop when editing API modules, services, middleware, or database-backed flows.
+
+</details>
+
+## Environment Variables
+
+The app validates environment values during startup through `src/config/env.ts`.
+
+Create local files from the examples:
+
+```bash
+cp .env.example .env
+cp .env.test.example .env.test
+```
+
+Common local development keys:
+
+| Key | Purpose |
+| --- | --- |
+| `PORT` | API port |
+| `NODE_ENV` | Runtime environment |
+| `DATABASE_URL` | Main PostgreSQL connection string |
+| `TEST_DATABASE_URL` | Test PostgreSQL connection string |
+| `JWT_SECRET` | JWT signing secret |
+| `JWT_EXPIRES_IN` | JWT lifetime |
+| `AWS_ACCESS_KEY_ID` | S3 access key |
+| `AWS_SECRET_ACCESS_KEY` | S3 secret key |
+| `AWS_REGION` | S3 region |
+| `AWS_S3_BUCKET` | S3 bucket name |
+| `GROQ_API_KEY` | Groq API key |
+| `GEMINI_API_KEY` | Gemini API key |
+
+Do not commit real `.env` files. The repository already ignores `.env`, `.env.local`, `.env.production`, and `.env.staging`.
+
+## Database Setup
+
+ResumeAI uses PostgreSQL with SQL migrations in `src/db/migrations`.
+
+### Option A: Local PostgreSQL
+
+Use this if PostgreSQL is installed directly on your machine.
+
+```bash
+pnpm db:local:setup
+pnpm db:migrate
+pnpm db:check
+```
+
+Detailed guide: [docs/postgres-local-setup.md](./docs/postgres-local-setup.md)
+
+### Option B: Docker Compose PostgreSQL
+
+Use this if you prefer a containerized database.
+
+```bash
+pnpm db:docker:up
+pnpm db:migrate
+pnpm db:check
+```
+
+Detailed guide: [docs/docker-postgres-setup.md](./docs/docker-postgres-setup.md)
+
+### Database areas
+
+| Table area | Purpose |
+| --- | --- |
+| `users` | Authentication and account identity |
+| `portfolio_items` | Projects, experience, education, skills, certifications |
+| `job_targets` | Target role and job description records |
+| `resume_generation_jobs` | Resume generation workflow tracking |
+| `resume_versions` | Generated resume output versions |
+| `cover_letters` | Generated cover letter records |
+| `gap_analyses` | Career gap recommendations |
+| `schema_migrations` | Applied migration tracking |
+
+## API Overview
+
+### Health
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/health` | API health check |
+
+### Auth
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/auth/register` | Create a user account |
+| `POST` | `/auth/login` | Sign in and receive a token |
+| `GET` | `/auth/me` | Fetch the current authenticated user |
+
+### Profile and onboarding
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/profile/me` | Fetch current profile |
+| `PATCH` | `/profile/personal` | Update personal details |
+| `PATCH` | `/profile/career-goal` | Update career goal |
+| `PATCH` | `/profile/onboarding-step` | Update onboarding progress |
+| `GET` | `/profile/completeness` | Calculate profile completeness |
+
+### Portfolio
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/portfolio/items` | Create a portfolio item |
+| `GET` | `/portfolio/items` | List portfolio items |
+| `GET` | `/portfolio/items/:id` | Fetch one portfolio item |
+| `PATCH` | `/portfolio/items/:id` | Update a portfolio item |
+| `DELETE` | `/portfolio/items/:id` | Delete a portfolio item |
+
+### Settings
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/settings` | Fetch account settings |
+| `PATCH` | `/settings/notifications` | Update notification settings |
+| `PATCH` | `/settings/profile` | Update profile settings |
+| `PATCH` | `/settings/career-goal` | Update career-goal settings |
+| `DELETE` | `/settings/account` | Delete account |
+
+## Project Structure
+
+```text
+resumeAI-backend/
+├── documents/                  # Product blueprint and MVP build plan
+├── docs/                       # Developer setup documentation
+├── docker/                     # Docker initialization assets
+├── scripts/                    # Database setup and utility scripts
+├── src/
+│   ├── config/                 # Environment and app configuration
+│   ├── data/                   # Static supporting data
+│   ├── db/                     # DB client, migrations, reset utilities
+│   ├── middleware/             # Auth, validation, upload, rate limiting
+│   ├── modules/                # Feature modules
+│   ├── services/               # Shared services and integrations
+│   ├── templates/              # Rendering templates
+│   ├── types/                  # Shared TypeScript types
+│   └── utils/                  # Errors, logging, response helpers
+├── tests/
+│   ├── fixtures/               # Test fixtures
+│   └── unit/                   # Unit and endpoint tests
+├── docker-compose.yml
+├── package.json
+└── README.md
+```
+
+## Scripts
+
+### App
+
+| Command | Description |
+| --- | --- |
+| `pnpm dev` | Start the backend in watch mode |
+| `pnpm build` | Compile TypeScript |
+| `pnpm start` | Run the compiled build |
+| `pnpm lint` | Run ESLint |
+| `pnpm lint:fix` | Fix ESLint issues where possible |
+| `pnpm type-check` | Run TypeScript checks |
+| `pnpm format` | Format source and tests |
+| `pnpm format:check` | Check formatting |
+
+### Tests
+
+| Command | Description |
+| --- | --- |
+| `pnpm test` | Run all tests |
+| `pnpm test:unit` | Run unit tests |
+| `pnpm test:integration` | Run integration tests |
+| `pnpm test:coverage` | Run coverage |
+| `pnpm test:watch` | Run Vitest in watch mode |
+
+### Database
+
+| Command | Description |
+| --- | --- |
+| `pnpm db:migrate` | Apply migrations |
+| `pnpm db:reset` | Reset current database and rerun migrations |
+| `pnpm db:check` | Smoke-test DB connectivity |
+| `pnpm db:local:setup` | Set up local PostgreSQL databases |
+| `pnpm db:local:connect` | Connect to local dev database |
+| `pnpm db:test:connect` | Connect to local test database |
+| `pnpm db:docker:up` | Start Docker PostgreSQL |
+| `pnpm db:docker:down` | Stop Docker PostgreSQL |
+| `pnpm db:docker:logs` | Tail Docker PostgreSQL logs |
+| `pnpm db:docker:reset` | Reset Docker PostgreSQL volume |
+| `pnpm db:docker:connect` | Connect to Docker dev database |
+| `pnpm db:docker:test:connect` | Connect to Docker test database |
+
+## Testing
+
+Implemented modules are covered with endpoint-level and service-level tests under `tests/unit`.
+
+Current coverage includes:
+
 - auth endpoints
-- profile and onboarding endpoints
-- portfolio CRUD endpoints
+- profile endpoints
+- portfolio endpoints
 - settings endpoints
-- unit tests for the implemented modules above
+- shared middleware
+- storage service
+- AI service boundaries
 
-### Present in codebase but broader than currently wired API surface
+Run the full suite:
 
-- AI service clients
-- ATS scoring services
-- gap advisor services
-- document parsing services
-- resume generation services
-- cover-letter services
+```bash
+pnpm test
+```
 
-These areas exist in the repository as part of the full project trajectory, but the current API registration and execution path should be treated as backend work in progress rather than complete end-to-end product readiness.
+Run only unit tests:
 
-## High-Level Architecture
+```bash
+pnpm test:unit
+```
 
-### Current backend architecture
+## Architecture
 
-- **Runtime:** Node.js 20+
-- **Framework:** Fastify
-- **Language:** TypeScript
-- **Validation:** Zod
-- **Database:** PostgreSQL
-- **Storage:** AWS S3
-- **AI integrations:** Groq and Google Gemini
-- **PDF rendering:** Puppeteer
+### Current backend stack
 
-### Planned full-platform architecture
+| Layer | Technology |
+| --- | --- |
+| Runtime | Node.js 20+ |
+| API framework | Fastify |
+| Language | TypeScript |
+| Validation | Zod |
+| Database | PostgreSQL |
+| Storage | AWS S3 |
+| AI integrations | Groq, Google Gemini |
+| PDF rendering | Puppeteer |
+| Tests | Vitest |
 
-According to the complete blueprint, ResumeAI is intended to evolve into:
+### Backend modules
 
-- a **Next.js frontend** for onboarding, dashboarding, resume preview, cover letter generation, and analytics
-- a **browser extension** for collecting job descriptions directly from job boards
-- a **multi-agent AI pipeline** for JD extraction, portfolio scoring, content generation, ATS scoring, and gap analysis
-- a **managed infrastructure stack** with hosted frontend, hosted backend, managed PostgreSQL, object storage, and production observability
-
-## Backend Modules
-
-### Active API modules
+Active API modules:
 
 - `src/modules/auth`
 - `src/modules/profile`
 - `src/modules/portfolio`
 - `src/modules/settings`
 
-### Supporting and planned domain modules
+Supporting and planned domain modules:
 
 - `src/modules/documents`
 - `src/modules/resume`
@@ -132,7 +368,7 @@ According to the complete blueprint, ResumeAI is intended to evolve into:
 - `src/modules/analytics`
 - `src/modules/ai`
 
-### Shared service layer
+Shared service layer:
 
 - `src/services/storage.service.ts`
 - `src/services/document-parser.service.ts`
@@ -141,270 +377,33 @@ According to the complete blueprint, ResumeAI is intended to evolve into:
 - `src/services/pdf-renderer.service.ts`
 - `src/services/ats-scorer.service.ts`
 
-## Repository Structure
+## Planning Documents
 
-```text
-resumeAI-backend/
-├── documents/                  # Product blueprint and backend MVP plan
-├── docs/                       # Developer setup documentation
-├── docker/                     # Docker initialization assets
-├── scripts/                    # Local database setup and utilities
-├── src/
-│   ├── config/                 # Environment and app configuration
-│   ├── data/                   # Static supporting data
-│   ├── db/                     # DB client, migrations, reset utilities
-│   ├── middleware/             # Auth, validation, upload, rate-limit
-│   ├── modules/                # Feature modules
-│   ├── services/               # Shared services and external integrations
-│   ├── templates/              # Rendering templates
-│   ├── types/                  # Shared TypeScript types
-│   └── utils/                  # Errors, logging, response helpers
-├── tests/
-│   ├── fixtures/               # Test fixtures
-│   └── unit/                   # Unit and endpoint tests
-├── docker-compose.yml          # Docker PostgreSQL setup
-├── package.json
-└── README.md
-```
+The broader product direction lives in:
 
-## API Overview
+- [documents/ResumeAI_Blueprint.md](./documents/ResumeAI_Blueprint.md)
+- [documents/ResumeAI__MVP_Build_Plan.md](./documents/ResumeAI__MVP_Build_Plan.md)
 
-### Health
+Use the blueprint for full-platform vision, AI-agent design, frontend direction, browser extension ideas, and infrastructure notes.
 
-- `GET /health`
+Use the MVP build plan for backend phases, database shape, module conventions, and implementation order.
 
-### Auth
+## Roadmap
 
-- `POST /auth/register`
-- `POST /auth/login`
-- `GET /auth/me`
+1. Complete remaining backend generation and analytics flows.
+2. Connect document ingestion and AI orchestration end to end.
+3. Implement resume generation and PDF delivery.
+4. Implement cover letter generation.
+5. Implement ATS scoring and gap analysis APIs.
+6. Build the frontend application.
+7. Build the browser extension for job description capture.
+8. Move MVP synchronous flows toward production orchestration where needed.
 
-### Profile and onboarding
+## Current Reality
 
-- `GET /profile/me`
-- `PATCH /profile/personal`
-- `PATCH /profile/career-goal`
-- `PATCH /profile/onboarding-step`
-- `GET /profile/completeness`
+This README describes the complete ResumeAI direction while staying clear about the repository today:
 
-### Portfolio
-
-- `POST /portfolio/items`
-- `GET /portfolio/items`
-- `GET /portfolio/items/:id`
-- `PATCH /portfolio/items/:id`
-- `DELETE /portfolio/items/:id`
-
-### Settings
-
-- `GET /settings`
-- `PATCH /settings/notifications`
-- `PATCH /settings/profile`
-- `PATCH /settings/career-goal`
-- `DELETE /settings/account`
-
-## Database
-
-The backend uses PostgreSQL with SQL migrations under `src/db/migrations`.
-
-Current schema areas include:
-
-- `users`
-- `portfolio_items`
-- `job_targets`
-- `resume_generation_jobs`
-- `resume_versions`
-- `cover_letters`
-- `gap_analyses`
-- `schema_migrations`
-
-The users and portfolio foundations are already used by the currently wired API surface. The remaining tables support the broader product plan around generation, analytics, and output management.
-
-## Local Development
-
-### Prerequisites
-
-- Node.js 20+
-- pnpm 9+
-- one of:
-  - local PostgreSQL
-  - Docker Desktop for the Docker Compose database workflow
-
-### Install
-
-```bash
-pnpm install
-```
-
-### Environment setup
-
-```bash
-cp .env.example .env
-cp .env.test.example .env.test
-```
-
-Fill in required environment variables before starting the app.
-
-## Database Setup Options
-
-### Option A: Local PostgreSQL
-
-Use the local setup workflow documented in:
-
-- [docs/postgres-local-setup.md](./docs/postgres-local-setup.md)
-
-Typical flow:
-
-```bash
-pnpm db:local:setup
-pnpm db:migrate
-pnpm db:check
-```
-
-### Option B: Docker Compose PostgreSQL
-
-Use the Docker workflow documented in:
-
-- [docs/docker-postgres-setup.md](./docs/docker-postgres-setup.md)
-
-Typical flow:
-
-```bash
-pnpm db:docker:up
-pnpm db:migrate
-pnpm db:check
-```
-
-## Running the Backend
-
-```bash
-pnpm dev
-```
-
-Production build:
-
-```bash
-pnpm build
-pnpm start
-```
-
-## Scripts
-
-### Application
-
-- `pnpm dev` — start the backend in watch mode
-- `pnpm build` — compile TypeScript
-- `pnpm start` — run the compiled build
-- `pnpm lint` — run ESLint
-- `pnpm type-check` — run TypeScript checks
-
-### Testing
-
-- `pnpm test` — run all tests
-- `pnpm test:unit` — run unit tests
-- `pnpm test:integration` — run integration tests
-- `pnpm test:coverage` — run coverage
-- `pnpm test:watch` — run Vitest in watch mode
-
-### Database
-
-- `pnpm db:migrate` — apply migrations
-- `pnpm db:reset` — reset the current database and rerun migrations
-- `pnpm db:check` — smoke-test DB connectivity
-
-### Local PostgreSQL
-
-- `pnpm db:local:setup`
-- `pnpm db:local:connect`
-- `pnpm db:test:connect`
-
-### Docker PostgreSQL
-
-- `pnpm db:docker:up`
-- `pnpm db:docker:down`
-- `pnpm db:docker:logs`
-- `pnpm db:docker:reset`
-- `pnpm db:docker:connect`
-- `pnpm db:docker:test:connect`
-
-## Testing
-
-The implemented backend modules are covered with mocked endpoint-level tests under `tests/unit`.
-
-Current test coverage includes:
-
-- auth endpoints
-- profile endpoints
-- portfolio endpoints
-- settings endpoints
-- shared middleware
-- storage service
-
-Run:
-
-```bash
-pnpm vitest
-```
-
-## Environment Variables
-
-The application validates environment variables at startup through `src/config/env.ts`.
-
-At minimum, local development expects values for:
-
-- `PORT`
-- `NODE_ENV`
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `JWT_EXPIRES_IN`
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_REGION`
-- `AWS_S3_BUCKET`
-- `GROQ_API_KEY`
-- `GEMINI_API_KEY`
-
-Use `.env.example` and `.env.test.example` as the source of truth for required keys and local URL conventions.
-
-## Engineering Notes
-
-### Branching
-
-This project follows a feature-branch workflow. The current repository history reflects a pattern of isolated task commits by module and endpoint.
-
-### Validation style
-
-- Zod schemas define request contracts
-- Fastify middleware performs request validation
-- shared error classes normalize API error responses
-
-### Backend conventions
-
-- strict TypeScript
-- parameterized SQL queries
-- safe user responses without `password_hash`
-- route protection through JWT middleware
-- modular service/controller/route separation
-
-## Product Roadmap Summary
-
-Based on the blueprint and implementation plan, the broader ResumeAI roadmap includes:
-
-1. complete the remaining backend generation and analytics flows
-2. connect document ingestion and AI orchestration end to end
-3. implement resume generation and PDF delivery
-4. implement cover letter generation
-5. implement ATS scoring and gap analysis APIs
-6. build the frontend application
-7. build the browser extension for JD capture
-8. evolve from MVP synchronous flows toward fuller production orchestration where needed
-
-## Important Note
-
-This README describes the **complete ResumeAI project direction** while staying honest about the **current repository reality**:
-
-- the **project plan is full-platform**
-- the **repository is currently backend-centered**
-- the **wired production-ready surface today is a subset of the total planned platform**
-
-That distinction is intentional and matches the project documents in `documents/`.
+- the product vision is full-platform
+- this repository is currently backend-centered
+- the fully wired API surface is smaller than the full planned product
+- several future-facing modules already exist as scaffolding or partial implementation
