@@ -6,6 +6,7 @@ import { env } from './config/env.js';
 import { authRoutes } from './modules/auth/index.js';
 import { portfolioRoutes } from './modules/portfolio/index.js';
 import { profileRoutes } from './modules/profile/index.js';
+import { settingsRoutes } from './modules/settings/index.js';
 import { AppError } from './utils/errors.js';
 import { error as errorResponse } from './utils/response.js';
 
@@ -37,6 +38,7 @@ const registerRoutes = (app: FastifyInstance) => {
 	app.register(authRoutes, { prefix: '/auth' });
 	app.register(portfolioRoutes, { prefix: '/portfolio' });
 	app.register(profileRoutes, { prefix: '/profile' });
+	app.register(settingsRoutes, { prefix: '/settings' });
 };
 
 export const buildApp = (): FastifyInstance => {
