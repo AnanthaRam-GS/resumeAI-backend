@@ -7,6 +7,10 @@ import { authRoutes } from './modules/auth/index.js';
 import { portfolioRoutes } from './modules/portfolio/index.js';
 import { profileRoutes } from './modules/profile/index.js';
 import { settingsRoutes } from './modules/settings/index.js';
+import { resumeRoutes } from './modules/resume/resume.routes.js';
+import { coverLetterRoutes } from './modules/cover-letter/cover-letter.routes.js';
+import { analyticsRoutes } from './modules/analytics/analytics.routes.js';
+import { documentsRoutes } from './modules/documents/documents.routes.js';
 import { AppError } from './utils/errors.js';
 import { error as errorResponse } from './utils/response.js';
 
@@ -36,9 +40,13 @@ const registerRoutes = (app: FastifyInstance) => {
 	});
 
 	app.register(authRoutes, { prefix: '/auth' });
-	app.register(portfolioRoutes, { prefix: '/portfolio' });
 	app.register(profileRoutes, { prefix: '/profile' });
+	app.register(portfolioRoutes, { prefix: '/portfolio' });
 	app.register(settingsRoutes, { prefix: '/settings' });
+	app.register(resumeRoutes, { prefix: '/resume' });
+	app.register(coverLetterRoutes, { prefix: '/resume' });
+	app.register(analyticsRoutes, { prefix: '/analytics' });
+	app.register(documentsRoutes, { prefix: '/portfolio' });
 };
 
 export const buildApp = (): FastifyInstance => {
