@@ -2,7 +2,7 @@ const STOP_WORDS = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'for', 'in', 'a
 
 const abbreviateTitle = (jobTitle: string): string => {
   return jobTitle
-    .split(/[\s\/\-]+/)
+    .split(/[\s/-]+/)
     .filter((word) => word.length > 0 && !STOP_WORDS.has(word.toLowerCase()))
     .map((word) => (word[0] ?? '').toUpperCase())
     .join('')
