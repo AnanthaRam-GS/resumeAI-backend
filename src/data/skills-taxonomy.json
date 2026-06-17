@@ -64,4 +64,69 @@
 			]
 		}
 	]
+  "groups": [
+    {
+      "name": "languages",
+      "skills": [
+        { "name": "TypeScript", "synonyms": ["TS", "typescript"] },
+        { "name": "JavaScript", "synonyms": ["JS", "javascript"] },
+        { "name": "Python", "synonyms": ["python"] },
+        { "name": "Java", "synonyms": ["java"] },
+        { "name": "Go", "synonyms": ["golang", "go"] },
+        { "name": "SQL", "synonyms": ["sql", "postgresql", "postgres"] }
+      ]
+    },
+    {
+      "name": "backend",
+      "skills": [
+        { "name": "Node.js", "synonyms": ["node", "nodejs", "node.js"] },
+        { "name": "Fastify", "synonyms": ["fastify"] },
+        { "name": "Express", "synonyms": ["express"] },
+        { "name": "REST APIs", "synonyms": ["rest", "rest api", "http"] },
+        { "name": "GraphQL", "synonyms": ["graphql"] },
+        { "name": "Microservices", "synonyms": ["microservices"] }
+      ]
+    },
+    {
+      "name": "frontend",
+      "skills": [
+        { "name": "React", "synonyms": ["react"] },
+        { "name": "Next.js", "synonyms": ["next", "nextjs", "next.js"] },
+        { "name": "HTML", "synonyms": ["html"] },
+        { "name": "CSS", "synonyms": ["css"] },
+        { "name": "Tailwind CSS", "synonyms": ["tailwind", "tailwindcss"] }
+      ]
+    },
+    {
+      "name": "cloud",
+      "skills": [
+        { "name": "AWS", "synonyms": ["amazon web services", "aws"] },
+        { "name": "S3", "synonyms": ["s3", "amazon s3"] },
+        { "name": "Docker", "synonyms": ["docker"] },
+        { "name": "Kubernetes", "synonyms": ["kubernetes", "k8s"] },
+        { "name": "CI/CD", "synonyms": ["cicd", "ci cd", "github actions", "gitlab ci"] }
+      ]
+    },
+    {
+      "name": "data_and_ai",
+      "skills": [
+        { "name": "Machine Learning", "synonyms": ["ml", "machine learning"] },
+        { "name": "Artificial Intelligence", "synonyms": ["ai", "artificial intelligence"] },
+        { "name": "LLM", "synonyms": ["llm", "large language model"] },
+        { "name": "Prompt Engineering", "synonyms": ["prompt engineering"] },
+        { "name": "Pandas", "synonyms": ["pandas"] },
+        { "name": "NumPy", "synonyms": ["numpy"] }
+      ]
+    },
+    {
+      "name": "quality",
+      "skills": [
+        { "name": "Testing", "synonyms": ["testing", "qa"] },
+        { "name": "Vitest", "synonyms": ["vitest"] },
+        { "name": "Jest", "synonyms": ["jest"] },
+        { "name": "Debugging", "synonyms": ["debugging"] },
+        { "name": "Performance Tuning", "synonyms": ["performance", "profiling"] }
+      ]
+    }
+  ]
 }
