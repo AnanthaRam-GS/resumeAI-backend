@@ -15,6 +15,11 @@ type UserRow = {
 	graduation_year: number | null;
 	target_role_category: string | null;
 	career_goal: string | null;
+	phone_number: string | null;
+	linkedin_url: string | null;
+	github_url: string | null;
+	portfolio_url: string | null;
+	location: string | null;
 	onboarding_step: number;
 	onboarding_complete: boolean;
 	profile_photo_s3_key: string | null;
@@ -42,6 +47,11 @@ const profileSelectColumns = `
 	graduation_year,
 	target_role_category,
 	career_goal,
+	phone_number,
+	linkedin_url,
+	github_url,
+	portfolio_url,
+	location,
 	onboarding_step,
 	onboarding_complete,
 	profile_photo_s3_key,
@@ -113,25 +123,16 @@ export const updatePersonalProfile = async (
 ): Promise<Profile> => {
 	const updates: Record<string, string | number | null> = {};
 
-	if (input.full_name !== undefined) {
-		updates.full_name = input.full_name;
-	}
-
-	if (input.university !== undefined) {
-		updates.university = input.university;
-	}
-
-	if (input.graduation_year !== undefined) {
-		updates.graduation_year = input.graduation_year;
-	}
-
-	if (input.target_role_category !== undefined) {
-		updates.target_role_category = input.target_role_category;
-	}
-
-	if (input.profile_photo_s3_key !== undefined) {
-		updates.profile_photo_s3_key = input.profile_photo_s3_key;
-	}
+	if (input.full_name !== undefined) updates.full_name = input.full_name;
+	if (input.university !== undefined) updates.university = input.university;
+	if (input.graduation_year !== undefined) updates.graduation_year = input.graduation_year;
+	if (input.target_role_category !== undefined) updates.target_role_category = input.target_role_category;
+	if (input.profile_photo_s3_key !== undefined) updates.profile_photo_s3_key = input.profile_photo_s3_key;
+	if (input.phone_number !== undefined) updates.phone_number = input.phone_number;
+	if (input.linkedin_url !== undefined) updates.linkedin_url = input.linkedin_url;
+	if (input.github_url !== undefined) updates.github_url = input.github_url;
+	if (input.portfolio_url !== undefined) updates.portfolio_url = input.portfolio_url;
+	if (input.location !== undefined) updates.location = input.location;
 
 	return updateUser(userId, updates);
 };

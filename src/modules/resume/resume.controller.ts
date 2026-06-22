@@ -8,13 +8,21 @@ import {
   duplicateResumeVersion,
   updateResumeVersionStatus,
   deleteResumeVersion,
+  updateResumeContent,
+  exportResumeVersionPdf,
+  saveEditorHtml,
+  renderAndStorePdf,
+  getEditorHtml,
 } from './resume.service.js';
 import type {
   GenerateResumeInput,
   GenerationStatusParams,
   ResumeVersionParams,
   UpdateResumeStatusInput,
+  UpdateResumeContentInput,
   ResumeVersionQuery,
+  SaveEditorHtmlInput,
+  RenderEditorPdfInput,
 } from './resume.schema.js';
 
 export const generateResume = async (
@@ -75,4 +83,44 @@ export const deleteVersion = async (
 ) => {
   await deleteResumeVersion(request.user.userId, request.params.id);
   return reply.status(204).send();
+};
+
+export const updateContent = async (
+  request: FastifyRequest<{ Params: ResumeVersionParams; Body: UpdateResumeContentInput }>,
+  reply: FastifyReply,
+) => {
+  const version = await updateResumeContent(request.user.userId, request.params.id, request.body.generated_content);
+  return reply.send(success(version, 'Resume content updated'));
+};
+
+export const exportVersionPdf = async (
+  request: FastifyRequest<{ Params: ResumeVersionParams }>,
+  reply: FastifyReply,
+) => {
+  const result = await exportResumeVersionPdf(request.user.userId, request.params.id);
+  return reply.send(success(result, 'Resume export ready'));
+};
+
+export const saveEditorHtmlHandler = async (
+  request: FastifyRequest<{ Params: ResumeVersionParams; Body: SaveEditorHtmlInput }>,
+  reply: FastifyReply,
+) => {
+  const result = await saveEditorHtml(request.user.userId, request.params.id, request.body.html);
+  return reply.send(success(result, 'Editor content saved'));
+};
+
+export const renderPdfHandler = async (
+  request: FastifyRequest<{ Params: ResumeVersionParams; Body: RenderEditorPdfInput }>,
+  reply: FastifyReply,
+) => {
+  const result = await renderAndStorePdf(request.user.userId, request.params.id, request.body.html);
+  return reply.send(success(result, 'PDF rendered successfully'));
+};
+
+export const getEditorHtmlHandler = async (
+  request: FastifyRequest<{ Params: ResumeVersionParams }>,
+  reply: FastifyReply,
+) => {
+  const result = await getEditorHtml(request.user.userId, request.params.id);
+  return reply.send(success(result));
 };

@@ -26,8 +26,23 @@ export const resumeVersionQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
+export const updateResumeContentSchema = z.object({
+  generated_content: z.record(z.string(), z.unknown()),
+});
+
+export const saveEditorHtmlSchema = z.object({
+  html: z.string().min(1).max(1_500_000),
+});
+
+export const renderEditorPdfSchema = z.object({
+  html: z.string().min(1).max(1_500_000),
+});
+
 export type GenerateResumeInput = z.infer<typeof generateResumeSchema>;
 export type GenerationStatusParams = z.infer<typeof generationStatusParamsSchema>;
 export type ResumeVersionParams = z.infer<typeof resumeVersionParamsSchema>;
 export type UpdateResumeStatusInput = z.infer<typeof updateResumeStatusSchema>;
 export type ResumeVersionQuery = z.infer<typeof resumeVersionQuerySchema>;
+export type UpdateResumeContentInput = z.infer<typeof updateResumeContentSchema>;
+export type SaveEditorHtmlInput = z.infer<typeof saveEditorHtmlSchema>;
+export type RenderEditorPdfInput = z.infer<typeof renderEditorPdfSchema>;

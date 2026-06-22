@@ -14,6 +14,12 @@ export const updateSettingsProfileSchema = z
 			.optional(),
 		target_role_category: z.string().trim().nullable().optional(),
 		profile_photo_s3_key: z.string().trim().nullable().optional(),
+		phone_number: z.string().trim().nullable().optional(),
+		linkedin_url: z.string().trim().nullable().optional(),
+		github_url: z.string().trim().nullable().optional(),
+		portfolio_url: z.string().trim().nullable().optional(),
+		location: z.string().trim().nullable().optional(),
+		writing_style: z.enum(['professional', 'concise', 'storytelling', 'technical']).nullable().optional(),
 	})
 	.refine((data) => Object.keys(data).length > 0, {
 		message: 'At least one field must be provided',

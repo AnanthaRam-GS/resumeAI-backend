@@ -9,18 +9,29 @@ import {
   duplicateVersion,
   updateVersionStatus,
   deleteVersion,
+  updateContent,
+  exportVersionPdf,
+  saveEditorHtmlHandler,
+  renderPdfHandler,
+  getEditorHtmlHandler,
 } from './resume.controller.js';
 import {
   generateResumeSchema,
   generationStatusParamsSchema,
   resumeVersionParamsSchema,
   updateResumeStatusSchema,
+  updateResumeContentSchema,
   resumeVersionQuerySchema,
+  saveEditorHtmlSchema,
+  renderEditorPdfSchema,
   type GenerateResumeInput,
   type GenerationStatusParams,
   type ResumeVersionParams,
   type UpdateResumeStatusInput,
+  type UpdateResumeContentInput,
   type ResumeVersionQuery,
+  type SaveEditorHtmlInput,
+  type RenderEditorPdfInput,
 } from './resume.schema.js';
 
 export const resumeRoutes: FastifyPluginAsync = async (app) => {
@@ -81,5 +92,54 @@ export const resumeRoutes: FastifyPluginAsync = async (app) => {
       preHandler: [auth, validate({ params: resumeVersionParamsSchema })],
     },
     deleteVersion,
+  );
+
+  app.patch<{ Params: ResumeVersionParams; Body: UpdateResumeContentInput }>(
+    '/versions/:id/content',
+    {
+      preHandler: [
+        auth,
+        validate({ params: resumeVersionParamsSchema, body: updateResumeContentSchema }),
+      ],
+    },
+    updateContent,
+  );
+
+  app.get<{ Params: ResumeVersionParams }>(
+    '/versions/:id/export',
+    {
+      preHandler: [auth, validate({ params: resumeVersionParamsSchema })],
+    },
+    exportVersionPdf,
+  );
+
+  app.patch<{ Params: ResumeVersionParams; Body: SaveEditorHtmlInput }>(
+    '/versions/:id/editor',
+    {
+      preHandler: [
+        auth,
+        validate({ params: resumeVersionParamsSchema, body: saveEditorHtmlSchema }),
+      ],
+    },
+    saveEditorHtmlHandler,
+  );
+
+  app.get<{ Params: ResumeVersionParams }>(
+    '/versions/:id/editor',
+    {
+      preHandler: [auth, validate({ params: resumeVersionParamsSchema })],
+    },
+    getEditorHtmlHandler,
+  );
+
+  app.post<{ Params: ResumeVersionParams; Body: RenderEditorPdfInput }>(
+    '/versions/:id/render-pdf',
+    {
+      preHandler: [
+        auth,
+        validate({ params: resumeVersionParamsSchema, body: renderEditorPdfSchema }),
+      ],
+    },
+    renderPdfHandler,
   );
 };

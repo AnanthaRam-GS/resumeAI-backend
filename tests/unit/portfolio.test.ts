@@ -93,9 +93,7 @@ describe('portfolio endpoints', () => {
 			expect(response.json()).toEqual({
 				success: true,
 				message: 'Portfolio item created',
-				data: {
-					item,
-				},
+				data: item,
 			});
 			expect(createPortfolioItemMock).toHaveBeenCalledWith('user-123', payload);
 
@@ -169,9 +167,7 @@ describe('portfolio endpoints', () => {
 			expect(response.json()).toEqual({
 				success: true,
 				message: 'Portfolio items retrieved',
-				data: {
-					items: [item],
-				},
+				data: [item],
 			});
 			expect(listPortfolioItemsMock).toHaveBeenCalledWith('user-123', {
 				type: 'project',
@@ -223,9 +219,7 @@ describe('portfolio endpoints', () => {
 			expect(response.json()).toEqual({
 				success: true,
 				message: 'Portfolio item retrieved',
-				data: {
-					item,
-				},
+				data: item,
 			});
 			expect(getPortfolioItemByIdMock).toHaveBeenCalledWith('user-123', item.id);
 
@@ -301,9 +295,7 @@ describe('portfolio endpoints', () => {
 			expect(response.json()).toEqual({
 				success: true,
 				message: 'Portfolio item updated',
-				data: {
-					item,
-				},
+				data: item,
 			});
 			expect(updatePortfolioItemMock).toHaveBeenCalledWith('user-123', item.id, payload);
 

@@ -32,7 +32,6 @@ export const requestGroqText = async (options: GroqPromptOptions): Promise<strin
 					: []),
 				{ role: 'user' as const, content: options.userPrompt },
 			],
-			response_format: { type: 'json_object' },
 		});
 
 		const content = getGroqContent(response);
@@ -47,16 +46,41 @@ export const requestGroqText = async (options: GroqPromptOptions): Promise<strin
 			throw error;
 		}
 
-		throw new AppError('Failed to generate Groq response', 502);
+		const message = error instanceof Error ? error.message : String(error);
+		console.error('[Groq] API call failed:', message, error);
+		throw new AppError(`Failed to generate Groq response: ${message}`, 502);
 	}
 };
 
 export const requestGroqJson = async <T>(options: GroqPromptOptions): Promise<T> => {
-	const content = await requestGroqText(options);
-
 	try {
+		const response = await groqClient.chat.completions.create({
+			model: options.model ?? GROQ_DEFAULT_MODEL,
+			temperature: options.temperature ?? 0.2,
+			max_tokens: options.maxTokens ?? 800,
+			messages: [
+				...(options.systemPrompt
+					? [{ role: 'system' as const, content: options.systemPrompt }]
+					: []),
+				{ role: 'user' as const, content: options.userPrompt },
+			],
+			response_format: { type: 'json_object' },
+		});
+
+		const content = getGroqContent(response);
+
+		if (!content) {
+			throw new ValidationError('Groq returned an empty response');
+		}
+
 		return JSON.parse(content) as T;
-	} catch {
-		throw new ValidationError('Groq returned invalid JSON');
+	} catch (error) {
+		if (error instanceof AppError) {
+			throw error;
+		}
+
+		const message = error instanceof Error ? error.message : String(error);
+		console.error('[Groq] JSON API call failed:', message, error);
+		throw new AppError(`Failed to generate Groq response: ${message}`, 502);
 	}
 };

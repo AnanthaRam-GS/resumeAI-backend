@@ -32,8 +32,8 @@ vi.mock('../ai/item-selector.service.js', () => ({
   selectPortfolioItems: vi.fn(() => []),
 }));
 
-vi.mock('../../services/gemini.service.js', () => ({
-  requestGeminiJson: vi.fn(async () => ({
+vi.mock('../../services/groq.service.js', () => ({
+  requestGroqJson: vi.fn(async () => ({
     summary: 'Strong backend engineer.',
     experience: [],
     projects: [],

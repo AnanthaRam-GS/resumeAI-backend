@@ -5,6 +5,19 @@ const dateStringSchema = z
 	.trim()
 	.regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format');
 
+const optionalNullableDateStringSchema = dateStringSchema.nullable().optional();
+
+const optionalTextSchema = z.string().trim().nullable().optional();
+
+const optionalUrlSchema = z.preprocess((value) => {
+	if (value === null || value === undefined) return value;
+	if (typeof value !== 'string') return value;
+	const trimmed = value.trim();
+	if (!trimmed) return undefined;
+	if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) return trimmed;
+	return `https://${trimmed}`;
+}, z.string().url('URL must be a valid URL').nullable().optional());
+
 export const portfolioItemTypeSchema = z.enum([
 	'project',
 	'experience',
@@ -19,29 +32,29 @@ const portfolioItemFields = {
 	type: portfolioItemTypeSchema,
 	source: portfolioItemSourceSchema,
 	title: z.string().trim().min(1, 'Title is required'),
-	description: z.string().trim().optional(),
-	start_date: dateStringSchema.optional(),
-	end_date: dateStringSchema.optional(),
+	description: optionalTextSchema,
+	start_date: optionalNullableDateStringSchema,
+	end_date: optionalNullableDateStringSchema,
 	is_current: z.boolean().optional(),
 	tech_stack: z.array(z.string().trim().min(1)).optional(),
-	project_url: z.string().trim().url('Project URL must be a valid URL').optional(),
-	impact_metrics: z.string().trim().optional(),
-	domain_category: z.string().trim().optional(),
-	company_name: z.string().trim().optional(),
-	employment_type: z.string().trim().optional(),
-	location: z.string().trim().optional(),
-	degree: z.string().trim().optional(),
-	field_of_study: z.string().trim().optional(),
-	institution_name: z.string().trim().optional(),
-	gpa: z.string().trim().optional(),
-	achievements: z.string().trim().optional(),
-	issuing_org: z.string().trim().optional(),
-	cert_url: z.string().trim().url('Certification URL must be a valid URL').optional(),
-	expiry_date: dateStringSchema.optional(),
+	project_url: optionalUrlSchema,
+	impact_metrics: optionalTextSchema,
+	domain_category: optionalTextSchema,
+	company_name: optionalTextSchema,
+	employment_type: optionalTextSchema,
+	location: optionalTextSchema,
+	degree: optionalTextSchema,
+	field_of_study: optionalTextSchema,
+	institution_name: optionalTextSchema,
+	gpa: optionalTextSchema,
+	achievements: optionalTextSchema,
+	issuing_org: optionalTextSchema,
+	cert_url: optionalUrlSchema,
+	expiry_date: optionalNullableDateStringSchema,
 	no_expiry: z.boolean().optional(),
-	skill_name: z.string().trim().optional(),
-	document_s3_key: z.string().trim().optional(),
-	document_filename: z.string().trim().optional(),
+	skill_name: optionalTextSchema,
+	document_s3_key: optionalTextSchema,
+	document_filename: optionalTextSchema,
 	extra: z.record(z.string(), z.unknown()).optional(),
 };
 
@@ -52,29 +65,29 @@ export const updatePortfolioItemSchema = z
 		type: portfolioItemTypeSchema.optional(),
 		source: portfolioItemSourceSchema.optional(),
 		title: z.string().trim().min(1, 'Title is required').optional(),
-		description: z.string().trim().optional(),
-		start_date: dateStringSchema.optional(),
-		end_date: dateStringSchema.optional(),
+		description: optionalTextSchema,
+		start_date: optionalNullableDateStringSchema,
+		end_date: optionalNullableDateStringSchema,
 		is_current: z.boolean().optional(),
 		tech_stack: z.array(z.string().trim().min(1)).optional(),
-		project_url: z.string().trim().url('Project URL must be a valid URL').optional(),
-		impact_metrics: z.string().trim().optional(),
-		domain_category: z.string().trim().optional(),
-		company_name: z.string().trim().optional(),
-		employment_type: z.string().trim().optional(),
-		location: z.string().trim().optional(),
-		degree: z.string().trim().optional(),
-		field_of_study: z.string().trim().optional(),
-		institution_name: z.string().trim().optional(),
-		gpa: z.string().trim().optional(),
-		achievements: z.string().trim().optional(),
-		issuing_org: z.string().trim().optional(),
-		cert_url: z.string().trim().url('Certification URL must be a valid URL').optional(),
-		expiry_date: dateStringSchema.optional(),
+		project_url: optionalUrlSchema,
+		impact_metrics: optionalTextSchema,
+		domain_category: optionalTextSchema,
+		company_name: optionalTextSchema,
+		employment_type: optionalTextSchema,
+		location: optionalTextSchema,
+		degree: optionalTextSchema,
+		field_of_study: optionalTextSchema,
+		institution_name: optionalTextSchema,
+		gpa: optionalTextSchema,
+		achievements: optionalTextSchema,
+		issuing_org: optionalTextSchema,
+		cert_url: optionalUrlSchema,
+		expiry_date: optionalNullableDateStringSchema,
 		no_expiry: z.boolean().optional(),
-		skill_name: z.string().trim().optional(),
-		document_s3_key: z.string().trim().optional(),
-		document_filename: z.string().trim().optional(),
+		skill_name: optionalTextSchema,
+		document_s3_key: optionalTextSchema,
+		document_filename: optionalTextSchema,
 		extra: z.record(z.string(), z.unknown()).optional(),
 	})
 	.refine((data) => Object.keys(data).length > 0, {

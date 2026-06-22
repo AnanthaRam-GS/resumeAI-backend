@@ -1,9 +1,12 @@
 import type { FastifyPluginAsync } from 'fastify';
+import multipart from '@fastify/multipart';
 import { auth } from '../../middleware/auth.js';
+import { parseImageUpload } from '../../middleware/upload.js';
 import { validate } from '../../middleware/validate.js';
 import {
 	deleteSettingsAccount,
 	getCurrentSettings,
+	uploadSettingsProfilePhoto,
 	updateCareerGoalSettings,
 	updateProfileSettings,
 	updateSettingsNotifications,
@@ -20,6 +23,8 @@ import {
 } from './settings.schema.js';
 
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
+	await app.register(multipart);
+
 	app.get(
 		'/',
 		{
@@ -52,6 +57,14 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
 			],
 		},
 		updateProfileSettings,
+	);
+
+	app.post(
+		'/profile-photo',
+		{
+			preHandler: [auth, parseImageUpload],
+		},
+		uploadSettingsProfilePhoto,
 	);
 
 	app.patch<{ Body: UpdateSettingsCareerGoalInput }>(

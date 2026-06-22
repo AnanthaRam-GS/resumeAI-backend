@@ -33,14 +33,39 @@ const mockUserRow = {
 	graduation_year: null,
 	target_role_category: null,
 	career_goal: null,
+	phone_number: null,
+	linkedin_url: null,
+	github_url: null,
+	portfolio_url: null,
+	location: null,
 	onboarding_step: 1,
 	onboarding_complete: false,
 	profile_photo_s3_key: null,
+	writing_style: 'professional',
 	notif_gap_digest: true,
 	notif_gen_complete: false,
 	notif_sync_complete: true,
 	created_at: new Date('2026-01-01T00:00:00.000Z'),
 	updated_at: new Date('2026-01-01T00:00:00.000Z'),
+};
+
+const expectedAuthUser = {
+	id: 'user-123',
+	full_name: 'Test User',
+	email: 'test@example.com',
+	university: null,
+	graduation_year: null,
+	target_role_category: null,
+	career_goal: null,
+	phone_number: null,
+	linkedin_url: null,
+	github_url: null,
+	portfolio_url: null,
+	location: null,
+	onboarding_step: 1,
+	onboarding_complete: false,
+	profile_photo_s3_key: null,
+	writing_style: 'professional',
 };
 
 describe('auth endpoints', () => {
@@ -74,11 +99,7 @@ describe('auth endpoints', () => {
 				success: true,
 				message: 'Registration successful',
 				data: {
-					user: {
-						id: 'user-123',
-						full_name: 'Test User',
-						email: 'test@example.com',
-					},
+					user: expectedAuthUser,
 					token: 'register-token',
 				},
 			});
@@ -166,11 +187,7 @@ describe('auth endpoints', () => {
 				success: true,
 				message: 'Login successful',
 				data: {
-					user: {
-						id: 'user-123',
-						full_name: 'Test User',
-						email: 'test@example.com',
-					},
+					user: expectedAuthUser,
 					token: 'login-token',
 				},
 			});
@@ -278,17 +295,7 @@ describe('auth endpoints', () => {
 				success: true,
 				message: 'Authenticated user retrieved',
 				data: {
-					user: {
-						id: 'user-123',
-						full_name: 'Test User',
-						email: 'test@example.com',
-						university: null,
-						graduation_year: null,
-						target_role_category: null,
-						career_goal: null,
-						onboarding_step: 1,
-						onboarding_complete: false,
-					},
+					user: expectedAuthUser,
 				},
 			});
 			expect(response.json().data.user).not.toHaveProperty('password_hash');

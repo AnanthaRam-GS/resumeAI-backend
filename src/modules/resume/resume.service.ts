@@ -1,6 +1,7 @@
 import { pool } from '../../db/client.js';
 import { ForbiddenError, NotFoundError } from '../../utils/errors.js';
-import { getSignedUrl, deleteFile } from '../../services/storage.service.js';
+import { getSignedUrl, deleteFile, uploadFile } from '../../services/storage.service.js';
+import { renderHtmlToPdfBuffer } from '../../services/pdf-renderer.service.js';
 import { generateVersionLabel } from '../../utils/version-label.js';
 import type {
   ResumeVersionRow,
@@ -20,6 +21,67 @@ const assertOwner = (row: { user_id: string }, userId: string, label = 'Resource
   if (row.user_id !== userId) {
     throw new ForbiddenError(`${label} does not belong to the current user`);
   }
+};
+
+const escapeHtml = (value: unknown): string =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
+const renderList = (items: unknown): string => {
+  if (!Array.isArray(items)) return '';
+  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+};
+
+const buildExportHtml = (args: {
+  content: Record<string, unknown>;
+  fullName: string;
+  email: string;
+  jobTitle?: string | null;
+  companyName?: string | null;
+}): string => {
+  const { content } = args;
+  const experience = Array.isArray(content.experience) ? content.experience as Array<Record<string, unknown>> : [];
+  const projects = Array.isArray(content.projects) ? content.projects as Array<Record<string, unknown>> : [];
+  const education = Array.isArray(content.education) ? content.education as Array<Record<string, unknown>> : [];
+  const certifications = Array.isArray(content.certifications) ? content.certifications as Array<Record<string, unknown>> : [];
+  const skills = content.skills && typeof content.skills === 'object' && !Array.isArray(content.skills)
+    ? content.skills as Record<string, unknown>
+    : {};
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 10.5pt; color: #1a1a1a; line-height: 1.45; padding: 16mm 14mm; }
+    header { border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 14px; }
+    h1 { font-family: Georgia, serif; font-size: 21pt; margin: 0; }
+    h2 { font-size: 9.5pt; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin: 13px 0 7px; }
+    .meta { color: #555; margin-top: 3px; }
+    .entry { margin-bottom: 9px; }
+    .entry-head { display: flex; justify-content: space-between; gap: 16px; font-weight: 700; }
+    .muted { color: #666; font-style: italic; font-weight: 400; }
+    ul { margin: 4px 0 0; padding-left: 16px; }
+    li { margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>${escapeHtml(args.fullName)}</h1>
+    <div class="meta">${escapeHtml(args.email)}${args.jobTitle ? ` · Tailored for ${escapeHtml(args.jobTitle)}${args.companyName ? ` at ${escapeHtml(args.companyName)}` : ''}` : ''}</div>
+  </header>
+  ${content.summary ? `<section><h2>Summary</h2><p>${escapeHtml(content.summary)}</p></section>` : ''}
+  ${experience.length ? `<section><h2>Experience</h2>${experience.map((item) => `<div class="entry"><div class="entry-head"><span>${escapeHtml(item.role)}${item.company ? ` · ${escapeHtml(item.company)}` : ''}</span><span class="muted">${escapeHtml(item.period)}</span></div>${renderList(item.bullets)}</div>`).join('')}</section>` : ''}
+  ${projects.length ? `<section><h2>Projects</h2>${projects.map((item) => `<div class="entry"><div class="entry-head"><span>${escapeHtml(item.name)}</span><span class="muted">${Array.isArray(item.tech_stack) ? (item.tech_stack as unknown[]).map(escapeHtml).join(' · ') : ''}</span></div>${item.description ? `<p>${escapeHtml(item.description)}</p>` : ''}${renderList(item.bullets)}</div>`).join('')}</section>` : ''}
+  ${Object.keys(skills).length ? `<section><h2>Skills</h2>${Object.entries(skills).map(([key, value]) => `<p><strong>${escapeHtml(key)}:</strong> ${Array.isArray(value) ? value.map(escapeHtml).join(', ') : escapeHtml(value)}</p>`).join('')}</section>` : ''}
+  ${education.length ? `<section><h2>Education</h2>${education.map((item) => `<div class="entry"><div class="entry-head"><span>${escapeHtml(item.degree)}</span><span class="muted">${escapeHtml(item.period)}</span></div><div>${escapeHtml(item.institution)}${item.gpa ? ` · GPA: ${escapeHtml(item.gpa)}` : ''}</div></div>`).join('')}</section>` : ''}
+  ${certifications.length ? `<section><h2>Certifications</h2>${certifications.map((item) => `<p><strong>${escapeHtml(item.name)}</strong>${item.issuer ? ` · ${escapeHtml(item.issuer)}` : ''}${item.date ? ` (${escapeHtml(item.date)})` : ''}</p>`).join('')}</section>` : ''}
+</body>
+</html>`;
 };
 
 const attachSignedUrl = async (
@@ -51,24 +113,31 @@ export const getGenerationJobStatus = async (
 export const listResumeVersions = async (
   userId: string,
   query: { status?: ResumeVersionStatus; limit?: number; offset?: number },
-): Promise<Array<ResumeVersionRow & { pdf_signed_url?: string }>> => {
-  const conditions = ['user_id = $1'];
+): Promise<Array<ResumeVersionRow & { pdf_signed_url?: string; role?: string; updated?: string }>> => {
+  const conditions = ['rv.user_id = $1'];
   const values: Array<string | number> = [userId];
 
   if (query.status) {
     values.push(query.status);
-    conditions.push(`status = $${values.length}`);
+    conditions.push(`rv.status = $${values.length}`);
   }
 
   const limit = query.limit ?? 20;
   const offset = query.offset ?? 0;
   values.push(limit, offset);
 
-  const result = await pool.query<ResumeVersionRow>(
-    `SELECT ${resumeVersionColumns}
-     FROM resume_versions
+  const result = await pool.query<ResumeVersionRow & { role?: string; updated?: string }>(
+    `SELECT rv.id, rv.user_id, rv.job_target_id, rv.generation_job_id,
+            rv.version_label, rv.template_id, rv.page_length,
+            rv.selected_item_ids, rv.generated_content,
+            rv.ats_score, rv.ats_feedback, rv.pdf_s3_key, rv.cover_letter_id,
+            rv.status, rv.submitted_at, rv.created_at, rv.updated_at,
+            jt.job_title AS role,
+            rv.updated_at::text AS updated
+     FROM resume_versions rv
+     LEFT JOIN job_targets jt ON jt.id = rv.job_target_id
      WHERE ${conditions.join(' AND ')}
-     ORDER BY created_at DESC
+     ORDER BY rv.created_at DESC
      LIMIT $${values.length - 1} OFFSET $${values.length}`,
     values,
   );
@@ -79,11 +148,17 @@ export const listResumeVersions = async (
 export const getResumeVersionById = async (
   userId: string,
   versionId: string,
-): Promise<ResumeVersionRow & { pdf_signed_url?: string }> => {
-  const result = await pool.query<ResumeVersionRow>(
-    `SELECT ${resumeVersionColumns}
-     FROM resume_versions
-     WHERE id = $1`,
+): Promise<ResumeVersionRow & { pdf_signed_url?: string; job_title?: string; company_name?: string }> => {
+  const result = await pool.query<ResumeVersionRow & { job_title?: string; company_name?: string }>(
+    `SELECT rv.id, rv.user_id, rv.job_target_id, rv.generation_job_id,
+            rv.version_label, rv.template_id, rv.page_length,
+            rv.selected_item_ids, rv.generated_content,
+            rv.ats_score, rv.ats_feedback, rv.pdf_s3_key, rv.cover_letter_id,
+            rv.status, rv.submitted_at, rv.created_at, rv.updated_at,
+            jt.job_title, jt.company_name
+     FROM resume_versions rv
+     LEFT JOIN job_targets jt ON jt.id = rv.job_target_id
+     WHERE rv.id = $1`,
     [versionId],
   );
 
@@ -188,4 +263,111 @@ export const deleteResumeVersion = async (
       // S3 deletion failure should not block DB success
     });
   }
+};
+
+export const updateResumeContent = async (
+  userId: string,
+  versionId: string,
+  generatedContent: unknown,
+): Promise<ResumeVersionRow> => {
+  const result = await pool.query<ResumeVersionRow>(
+    `UPDATE resume_versions
+     SET generated_content = $1, updated_at = NOW()
+     WHERE id = $2 AND user_id = $3
+     RETURNING ${resumeVersionColumns}`,
+    [JSON.stringify(generatedContent), versionId, userId],
+  );
+
+  const version = result.rows[0];
+  if (!version) throw new NotFoundError('Resume version not found');
+  return version;
+};
+
+export const exportResumeVersionPdf = async (
+  userId: string,
+  versionId: string,
+): Promise<{ url: string }> => {
+  const version = await getResumeVersionById(userId, versionId);
+  if (version.pdf_s3_key) {
+    return { url: await getSignedUrl(version.pdf_s3_key) };
+  }
+
+  const userResult = await pool.query<{ full_name: string; email: string }>(
+    `SELECT full_name, email FROM users WHERE id = $1`,
+    [userId],
+  );
+  const user = userResult.rows[0];
+  if (!user) throw new NotFoundError('User not found');
+
+  const html = buildExportHtml({
+    content: version.generated_content,
+    fullName: user.full_name,
+    email: user.email,
+    jobTitle: version.job_title,
+    companyName: version.company_name,
+  });
+  const pdfBuffer = await renderHtmlToPdfBuffer(html, { format: 'A4', printBackground: true });
+  const key = `users/${userId}/resumes/export-${versionId}.pdf`;
+  await uploadFile(key, pdfBuffer, 'application/pdf');
+  await pool.query(
+    `UPDATE resume_versions SET pdf_s3_key = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3`,
+    [key, versionId, userId],
+  );
+
+  return { url: await getSignedUrl(key) };
+};
+
+export const saveEditorHtml = async (
+  userId: string,
+  versionId: string,
+  html: string,
+): Promise<{ id: string; editor_updated_at: string }> => {
+  const result = await pool.query<{ id: string; editor_updated_at: string }>(
+    `UPDATE resume_versions
+     SET editor_html = $1, editor_updated_at = NOW(), updated_at = NOW()
+     WHERE id = $2 AND user_id = $3
+     RETURNING id, editor_updated_at`,
+    [html, versionId, userId],
+  );
+  const row = result.rows[0];
+  if (!row) throw new NotFoundError('Resume version not found');
+  return row;
+};
+
+export const renderAndStorePdf = async (
+  userId: string,
+  versionId: string,
+  html: string,
+): Promise<{ url: string }> => {
+  const exists = await pool.query<{ id: string }>(
+    `SELECT id FROM resume_versions WHERE id = $1 AND user_id = $2`,
+    [versionId, userId],
+  );
+  if (!exists.rows[0]) throw new NotFoundError('Resume version not found');
+
+  const pdfBuffer = await renderHtmlToPdfBuffer(html, { format: 'A4', printBackground: true });
+  const key = `users/${userId}/resumes/editor-${versionId}.pdf`;
+  await uploadFile(key, pdfBuffer, 'application/pdf');
+
+  await pool.query(
+    `UPDATE resume_versions SET pdf_s3_key = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3`,
+    [key, versionId, userId],
+  );
+
+  const url = await getSignedUrl(key);
+  return { url };
+};
+
+export const getEditorHtml = async (
+  userId: string,
+  versionId: string,
+): Promise<{ editor_html: string | null }> => {
+  const result = await pool.query<{ editor_html: string | null; user_id: string }>(
+    `SELECT editor_html, user_id FROM resume_versions WHERE id = $1`,
+    [versionId],
+  );
+  const row = result.rows[0];
+  if (!row) throw new NotFoundError('Resume version not found');
+  assertOwner(row, userId, 'Resume version');
+  return { editor_html: row.editor_html };
 };

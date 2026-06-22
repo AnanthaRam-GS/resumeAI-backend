@@ -9,10 +9,12 @@ import type {
 import { getSettings } from './settings.service.js';
 import {
 	deleteAccount,
+	uploadProfilePhoto,
 	updateNotificationSettings,
 	updateSettingsCareerGoal,
 	updateSettingsProfile,
 } from './settings.service.js';
+import { ValidationError } from '../../utils/errors.js';
 
 export const getCurrentSettings = async (
 	request: FastifyRequest,
@@ -64,6 +66,32 @@ export const updateProfileSettings = async (
 				settings,
 			},
 			'Profile settings updated',
+		),
+	);
+};
+
+export const uploadSettingsProfilePhoto = async (
+	request: FastifyRequest,
+	reply: FastifyReply,
+) => {
+	const file = request.uploadedFile;
+	if (!file) {
+		throw new ValidationError('No file found on request. Use parseImageUpload middleware.');
+	}
+
+	const settings = await uploadProfilePhoto(
+		request.user.userId,
+		file.buffer,
+		file.mimetype,
+		file.filename,
+	);
+
+	return reply.status(201).send(
+		success(
+			{
+				settings,
+			},
+			'Profile photo updated',
 		),
 	);
 };

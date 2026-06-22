@@ -1,4 +1,5 @@
 import { pool } from '../../db/client.js';
+import { randomUUID } from 'crypto';
 import { NotFoundError, ValidationError } from '../../utils/errors.js';
 import { requestGeminiJson } from '../../services/gemini.service.js';
 import { gapAdvisorPrompt } from '../ai/prompts/gap-advisor.prompt.js';
@@ -6,6 +7,7 @@ import type { GapAnalysisRow, MissingSkill, SuggestedProject, LearningResource }
 
 type GapAnalysisPayload = {
   careerGoal: string;
+  jobDescription?: string;
   portfolioSummary: {
     skills: string[];
     techStack: string[];
@@ -38,7 +40,18 @@ const normalizeOutput = (raw: GeminiGapOutput): {
   learning_resources: (raw.learning_resources ?? []).slice(0, 6),
 });
 
-export const runGapAnalysis = async (userId: string): Promise<GapAnalysisRow> => {
+type RunGapAnalysisOptions = {
+  jobDescription?: string;
+  persist?: boolean;
+};
+
+export const runGapAnalysis = async (
+  userId: string,
+  options: RunGapAnalysisOptions | string = {},
+): Promise<GapAnalysisRow> => {
+  const normalizedOptions = typeof options === 'string' ? { jobDescription: options } : options;
+  const { jobDescription, persist = true } = normalizedOptions;
+
   // Fetch user career goal
   const userResult = await pool.query<{ career_goal: string | null }>(
     `SELECT career_goal FROM users WHERE id = $1`,
@@ -87,6 +100,7 @@ export const runGapAnalysis = async (userId: string): Promise<GapAnalysisRow> =>
 
   const payload: GapAnalysisPayload = {
     careerGoal,
+    ...(jobDescription ? { jobDescription } : {}),
     portfolioSummary: { skills, techStack, projectDomains, experienceSummary, certifications },
   };
 
@@ -99,7 +113,19 @@ export const runGapAnalysis = async (userId: string): Promise<GapAnalysisRow> =>
 
   const normalized = normalizeOutput(raw);
 
-  // Upsert — one row per user
+  if (!persist) {
+    return {
+      id: randomUUID(),
+      user_id: userId,
+      career_goal: careerGoal,
+      missing_skills: normalized.missing_skills,
+      suggested_projects: normalized.suggested_projects,
+      learning_resources: normalized.learning_resources,
+      generated_at: new Date(),
+    };
+  }
+
+  // Upsert — one saved row per user for career-goal analysis.
   const result = await pool.query<GapAnalysisRow>(
     `INSERT INTO gap_analyses (user_id, career_goal, missing_skills, suggested_projects, learning_resources, generated_at)
      VALUES ($1, $2, $3, $4, $5, NOW())
