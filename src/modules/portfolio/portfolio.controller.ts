@@ -20,14 +20,7 @@ export const createItem = async (request: FastifyRequest, reply: FastifyReply) =
 		request.body as CreatePortfolioItemInput,
 	);
 
-	return reply.status(201).send(
-		success(
-			{
-				item,
-			},
-			'Portfolio item created',
-		),
-	);
+	return reply.status(201).send(success(item, 'Portfolio item created'));
 };
 
 export const listItems = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -36,14 +29,7 @@ export const listItems = async (request: FastifyRequest, reply: FastifyReply) =>
 		request.query as PortfolioItemQuery,
 	);
 
-	return reply.send(
-		success(
-			{
-				items,
-			},
-			'Portfolio items retrieved',
-		),
-	);
+	return reply.send(success(items, 'Portfolio items retrieved'));
 };
 
 export const getItemById = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -52,14 +38,7 @@ export const getItemById = async (request: FastifyRequest, reply: FastifyReply) 
 		(request.params as PortfolioItemParams).id,
 	);
 
-	return reply.send(
-		success(
-			{
-				item,
-			},
-			'Portfolio item retrieved',
-		),
-	);
+	return reply.send(success(item, 'Portfolio item retrieved'));
 };
 
 export const updateItem = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -69,14 +48,7 @@ export const updateItem = async (request: FastifyRequest, reply: FastifyReply) =
 		request.body as UpdatePortfolioItemInput,
 	);
 
-	return reply.send(
-		success(
-			{
-				item,
-			},
-			'Portfolio item updated',
-		),
-	);
+	return reply.send(success(item, 'Portfolio item updated'));
 };
 
 export const deleteItem = async (request: FastifyRequest, reply: FastifyReply) => {
