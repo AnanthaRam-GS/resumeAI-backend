@@ -42,12 +42,42 @@ export const requestGeminiText = async (options: GeminiPromptOptions): Promise<s
 	}
 };
 
-export const requestGeminiJson = async <T>(options: GeminiPromptOptions): Promise<T> => {
-	const content = await requestGeminiText(options);
+const stripMarkdownFences = (raw: string): string => {
+	return raw
+		.replace(/^```(?:json)?\s*/i, '')
+		.replace(/\s*```\s*$/, '')
+		.trim();
+};
 
+export const requestGeminiJson = async <T>(options: GeminiPromptOptions): Promise<T> => {
 	try {
-		return JSON.parse(content) as T;
-	} catch {
-		throw new ValidationError('Gemini returned invalid JSON');
+		const model = geminiClient.getGenerativeModel({
+			model: options.model ?? GEMINI_DEFAULT_MODEL,
+			systemInstruction: options.systemPrompt,
+			generationConfig: {
+				temperature: options.temperature ?? 0.2,
+				maxOutputTokens: options.maxOutputTokens ?? 1024,
+				responseMimeType: 'application/json',
+			},
+		});
+
+		const result = await model.generateContent(options.userPrompt);
+		const raw = result.response.text().trim();
+
+		if (!raw) {
+			throw new ValidationError('Gemini returned an empty response');
+		}
+
+		const cleaned = stripMarkdownFences(raw);
+		try {
+			return JSON.parse(cleaned) as T;
+		} catch {
+			throw new ValidationError('Gemini returned invalid JSON');
+		}
+	} catch (error) {
+		if (error instanceof AppError) {
+			throw error;
+		}
+		throw new AppError('Failed to generate Gemini JSON response', 502);
 	}
 };

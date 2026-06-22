@@ -21,8 +21,9 @@ const envSchema = z.object({
 		.min(1, 'AWS_SECRET_ACCESS_KEY is required'),
 	AWS_REGION: z.string().trim().min(1, 'AWS_REGION is required'),
 	AWS_S3_BUCKET: z.string().trim().min(1, 'AWS_S3_BUCKET is required'),
-	GROQ_API_KEY: z.string().trim().min(1, 'GROQ_API_KEY is required'),
+	GROQ_API_KEY: z.string().trim().min(1).optional(),
 	GEMINI_API_KEY: z.string().trim().min(1, 'GEMINI_API_KEY is required'),
+	NVIDIA_API_KEY: z.string().trim().min(1, 'NVIDIA_API_KEY is required'),
 });
 
 const formatEnvErrors = (error: z.ZodError) => {

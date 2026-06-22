@@ -1,5 +1,5 @@
 import type { ExtractedEntities } from '../../types/ai.types.js';
-import { requestGroqJson } from '../../services/groq.service.js';
+import { requestNimJson } from '../../services/nvidia-nim.service.js';
 import { ValidationError } from '../../utils/errors.js';
 import { jdExtractionPrompt } from './prompts/jd-extraction.prompt.js';
 
@@ -42,7 +42,7 @@ export const analyzeJobDescription = async (jobDescription: string): Promise<Ext
 		throw new ValidationError('Job description is required');
 	}
 
-	const extracted = await requestGroqJson<Partial<ExtractedEntities>>({
+	const extracted = await requestNimJson<Partial<ExtractedEntities>>({
 		systemPrompt: jdExtractionPrompt,
 		userPrompt: jobDescription,
 		temperature: 0.1,

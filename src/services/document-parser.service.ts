@@ -1,6 +1,6 @@
 import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
-import { requestGroqJson } from './groq.service.js';
+import { requestNimJson } from './nvidia-nim.service.js';
 import { documentParserPrompt } from '../modules/ai/prompts/document-parser.prompt.js';
 import { ValidationError } from '../utils/errors.js';
 import type { CreatePortfolioItemInput } from '../modules/portfolio/portfolio.schema.js';
@@ -95,10 +95,9 @@ export const parseDocumentIntoPortfolioItems = async (
     throw new ValidationError('Could not extract readable text from the uploaded document');
   }
 
-  // Truncate to ~4000 chars for Groq token budget (Llama 3.1 8B handles this well)
-  const truncatedText = rawText.length > 4000 ? rawText.slice(0, 4000) : rawText;
+  const truncatedText = rawText.length > 8000 ? rawText.slice(0, 8000) : rawText;
 
-  const parsed = await requestGroqJson<DocumentParserOutput>({
+  const parsed = await requestNimJson<DocumentParserOutput>({
     systemPrompt: documentParserPrompt,
     userPrompt: truncatedText,
     maxTokens: 2000,
