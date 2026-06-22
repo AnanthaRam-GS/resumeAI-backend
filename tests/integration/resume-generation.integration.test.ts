@@ -24,8 +24,15 @@ vi.mock('../../src/modules/ai/item-selector.service.js', () => ({
   selectPortfolioItems: (scored: any[]) => scored.slice(0, 3).map((s, i) => ({ ...s, selectionRank: i + 1 })),
 }));
 
-vi.mock('../../src/services/gemini.service.js', () => ({
-  requestGeminiJson: async () => ({ sections: [{ heading: 'Summary', bullets: ['Built cool stuff'] }] }),
+vi.mock('../../src/services/groq.service.js', () => ({
+  requestGroqJson: async () => ({
+    summary: 'Built cool stuff',
+    experience: [],
+    projects: [],
+    skills: {},
+    education: [],
+    certifications: [],
+  }),
 }));
 
 vi.mock('../../src/services/pdf-renderer.service.js', () => ({
@@ -58,6 +65,19 @@ describe('resume orchestrator integration (mocked)', () => {
 
       if (text.includes('INSERT INTO resume_versions')) {
         return { rows: [{ id: 'resume-version-id', pdf_s3_key: 'resumes/test.pdf' }] };
+      }
+
+      if (text.includes('FROM portfolio_items')) {
+        return {
+          rows: [{
+            id: 'portfolio-item-id',
+            type: 'project',
+            title: 'TypeScript API',
+            description: 'Built a Node and TypeScript backend service',
+            tech_stack: ['TypeScript', 'Node.js'],
+            impact_metrics: 'Reduced latency by 30%',
+          }],
+        };
       }
 
       return { rows: [] };

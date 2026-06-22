@@ -1,6 +1,6 @@
 import { pool } from '../../db/client.js';
 import { NotFoundError, ForbiddenError } from '../../utils/errors.js';
-import { requestGeminiJson } from '../../services/gemini.service.js';
+import { requestNimJson } from '../../services/nvidia-nim.service.js';
 import { renderHtmlToPdfBuffer } from '../../services/pdf-renderer.service.js';
 import { uploadFile, getSignedUrl } from '../../services/storage.service.js';
 import { coverLetterPrompt } from '../ai/prompts/cover-letter.prompt.js';
@@ -74,7 +74,7 @@ export const generateCoverLetter = async (
   userId: string,
   resumeVersionId: string,
   input: GenerateCoverLetterInput,
-): Promise<CoverLetterRow & { pdf_signed_url?: string }> => {
+): Promise<CoverLetterRow & { pdf_signed_url?: string; content?: string }> => {
   // Fetch resume version and verify ownership
   const versionResult = await pool.query<{
     id: string;
@@ -141,11 +141,11 @@ export const generateCoverLetter = async (
     selectedItems,
   };
 
-  // Generate via Gemini
-  const generated = await requestGeminiJson<GeneratedCoverLetter>({
+  // Generate via Groq
+  const generated = await requestNimJson<GeneratedCoverLetter>({
     systemPrompt: coverLetterPrompt,
     userPrompt: JSON.stringify(payload),
-    maxOutputTokens: 1024,
+    maxTokens: 1024,
     temperature: 0.4,
   });
 
@@ -154,11 +154,16 @@ export const generateCoverLetter = async (
     .join('\n\n');
   const letterText = generated.letter_text || fallbackParts || 'Cover letter generation failed. Please try again.';
 
-  // Render to PDF and upload to S3
-  const html = buildCoverLetterHtml(letterText, jobTitle, companyName);
-  const pdfBuffer = await renderHtmlToPdfBuffer(html);
-  const pdfKey = `users/${userId}/cover-letters/${resumeVersionId}.pdf`;
-  await uploadFile(pdfKey, pdfBuffer, 'application/pdf');
+  // Render to PDF and upload to S3 (best-effort — skip gracefully if unavailable)
+  let pdfKey: string | null = null;
+  try {
+    const html = buildCoverLetterHtml(letterText, jobTitle, companyName);
+    const pdfBuffer = await renderHtmlToPdfBuffer(html);
+    pdfKey = `users/${userId}/cover-letters/${resumeVersionId}.pdf`;
+    await uploadFile(pdfKey, pdfBuffer, 'application/pdf');
+  } catch {
+    pdfKey = null;
+  }
 
   // Store cover letter in DB
   const clResult = await pool.query<CoverLetterRow>(
@@ -175,14 +180,17 @@ export const generateCoverLetter = async (
     [coverLetter.id, resumeVersionId, userId],
   );
 
-  const pdf_signed_url = await getSignedUrl(pdfKey);
-  return { ...coverLetter, pdf_signed_url };
+  let pdf_signed_url: string | undefined;
+  if (pdfKey) {
+    try { pdf_signed_url = await getSignedUrl(pdfKey); } catch { /* S3 unavailable */ }
+  }
+  return { ...coverLetter, content: coverLetter.content_text ?? undefined, pdf_signed_url };
 };
 
 export const getCoverLetter = async (
   userId: string,
   resumeVersionId: string,
-): Promise<CoverLetterRow & { pdf_signed_url?: string }> => {
+): Promise<CoverLetterRow & { pdf_signed_url?: string; content?: string }> => {
   // Verify version ownership
   const versionResult = await pool.query<{ user_id: string }>(
     `SELECT user_id FROM resume_versions WHERE id = $1`,
@@ -200,10 +208,10 @@ export const getCoverLetter = async (
   const coverLetter = result.rows[0];
   if (!coverLetter) throw new NotFoundError('No cover letter found for this resume version');
 
+  let pdf_signed_url: string | undefined;
   if (coverLetter.pdf_s3_key) {
-    const pdf_signed_url = await getSignedUrl(coverLetter.pdf_s3_key);
-    return { ...coverLetter, pdf_signed_url };
+    try { pdf_signed_url = await getSignedUrl(coverLetter.pdf_s3_key); } catch { /* S3 unavailable */ }
   }
 
-  return coverLetter;
+  return { ...coverLetter, content: coverLetter.content_text ?? undefined, pdf_signed_url };
 };
