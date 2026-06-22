@@ -17,7 +17,11 @@ export const triggerGapAnalysis = async (
   request: FastifyRequest,
   reply: FastifyReply,
 ) => {
-  const result = await runGapAnalysis(request.user.userId);
+  const body = request.body as { jobDescription?: string; save?: boolean } | null;
+  const result = await runGapAnalysis(request.user.userId, {
+    jobDescription: body?.jobDescription,
+    persist: body?.save ?? !body?.jobDescription,
+  });
   return reply.status(201).send(success(result, 'Gap analysis complete'));
 };
 

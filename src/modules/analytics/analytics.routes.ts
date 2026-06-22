@@ -8,6 +8,11 @@ const atsParamsSchema = z.object({
   resumeVersionId: z.uuid('Resume version ID must be a valid UUID'),
 });
 
+const gapAnalysisSchema = z.object({
+  jobDescription: z.string().trim().min(50, 'Job description must be at least 50 characters').optional(),
+  save: z.boolean().optional(),
+}).optional();
+
 export const analyticsRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: { resumeVersionId: string } }>(
     '/ats/:resumeVersionId',
@@ -19,7 +24,7 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
 
   app.post(
     '/gap-analysis',
-    { preHandler: auth },
+    { preHandler: [auth, validate({ body: gapAnalysisSchema })] },
     triggerGapAnalysis,
   );
 
