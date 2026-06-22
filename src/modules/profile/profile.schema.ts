@@ -11,6 +11,11 @@ export const updatePersonalProfileSchema = z
 		graduation_year: z.int('Graduation year must be an integer').optional(),
 		target_role_category: z.string().trim().optional(),
 		profile_photo_s3_key: z.string().trim().nullable().optional(),
+		phone_number: z.string().trim().nullable().optional(),
+		linkedin_url: z.string().trim().nullable().optional(),
+		github_url: z.string().trim().nullable().optional(),
+		portfolio_url: z.string().trim().nullable().optional(),
+		location: z.string().trim().nullable().optional(),
 	})
 	.refine((data) => Object.keys(data).length > 0, {
 		message: 'At least one field must be provided',
@@ -24,8 +29,8 @@ export const updateCareerGoalSchema = z.object({
 export const updateOnboardingStepSchema = z.object({
 	onboarding_step: z
 		.int('Onboarding step must be an integer')
-		.min(1, 'Onboarding step must be between 1 and 5')
-		.max(5, 'Onboarding step must be between 1 and 5'),
+		.min(1, 'Onboarding step must be between 1 and 6')
+		.max(6, 'Onboarding step must be between 1 and 6'),
 	onboarding_complete: z.boolean().optional(),
 });
 

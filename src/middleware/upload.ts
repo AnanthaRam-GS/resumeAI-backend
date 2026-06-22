@@ -1,13 +1,22 @@
 import type { FastifyRequest, preHandlerHookHandler } from 'fastify';
 import { ValidationError } from '../utils/errors.js';
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_MIME_TYPES = new Set([
+const DOCUMENT_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const IMAGE_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/msword',
 ]);
-const ALLOWED_EXTENSIONS = new Set(['.pdf', '.docx', '.doc']);
+const ALLOWED_DOCUMENT_EXTENSIONS = new Set(['.pdf', '.docx', '.doc']);
+
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
 export interface UploadedFile {
   filename: string;
@@ -26,7 +35,16 @@ const getExtension = (filename: string): string => {
   return dot === -1 ? '' : filename.slice(dot).toLowerCase();
 };
 
-export const parseUpload: preHandlerHookHandler = async (request: FastifyRequest) => {
+const parseMultipartFile = async (
+  request: FastifyRequest,
+  options: {
+    allowedMimeTypes: Set<string>;
+    allowedExtensions: Set<string>;
+    maxFileSizeBytes: number;
+    invalidTypeMessage: string;
+    maxSizeMessage: string;
+  },
+) => {
   if (!request.isMultipart()) {
     throw new ValidationError('Request must be multipart/form-data');
   }
@@ -39,10 +57,10 @@ export const parseUpload: preHandlerHookHandler = async (request: FastifyRequest
 
   const { filename, mimetype, file } = data;
 
-  if (!ALLOWED_MIME_TYPES.has(mimetype) && !ALLOWED_EXTENSIONS.has(getExtension(filename))) {
+  if (!options.allowedMimeTypes.has(mimetype) && !options.allowedExtensions.has(getExtension(filename))) {
     // Drain the stream to prevent memory leak before throwing
     file.resume();
-    throw new ValidationError('Only PDF and DOCX files are supported');
+    throw new ValidationError(options.invalidTypeMessage);
   }
 
   const chunks: Buffer[] = [];
@@ -50,9 +68,9 @@ export const parseUpload: preHandlerHookHandler = async (request: FastifyRequest
 
   for await (const chunk of file) {
     totalSize += chunk.length;
-    if (totalSize > MAX_FILE_SIZE_BYTES) {
+    if (totalSize > options.maxFileSizeBytes) {
       file.destroy();
-      throw new ValidationError('File size must not exceed 10 MB');
+      throw new ValidationError(options.maxSizeMessage);
     }
     chunks.push(chunk as Buffer);
   }
@@ -66,4 +84,24 @@ export const parseUpload: preHandlerHookHandler = async (request: FastifyRequest
     mimetype,
     buffer: Buffer.concat(chunks),
   };
+};
+
+export const parseUpload: preHandlerHookHandler = async (request: FastifyRequest) => {
+  await parseMultipartFile(request, {
+    allowedMimeTypes: ALLOWED_DOCUMENT_MIME_TYPES,
+    allowedExtensions: ALLOWED_DOCUMENT_EXTENSIONS,
+    maxFileSizeBytes: DOCUMENT_MAX_FILE_SIZE_BYTES,
+    invalidTypeMessage: 'Only PDF and DOCX files are supported',
+    maxSizeMessage: 'File size must not exceed 10 MB',
+  });
+};
+
+export const parseImageUpload: preHandlerHookHandler = async (request: FastifyRequest) => {
+  await parseMultipartFile(request, {
+    allowedMimeTypes: ALLOWED_IMAGE_MIME_TYPES,
+    allowedExtensions: ALLOWED_IMAGE_EXTENSIONS,
+    maxFileSizeBytes: IMAGE_MAX_FILE_SIZE_BYTES,
+    invalidTypeMessage: 'Only JPG, PNG, and WebP images are supported',
+    maxSizeMessage: 'Image size must not exceed 5 MB',
+  });
 };

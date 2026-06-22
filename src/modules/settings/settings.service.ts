@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { pool } from '../../db/client.js';
-import { NotFoundError, UnauthorizedError } from '../../utils/errors.js';
+import { deleteFile, getSignedUrl, uploadFile } from '../../services/storage.service.js';
+import { ForbiddenError, NotFoundError } from '../../utils/errors.js';
 import type {
 	UpdateNotificationSettingsInput,
 	UpdateSettingsCareerGoalInput,
@@ -16,7 +17,13 @@ type UserRow = {
 	graduation_year: number | null;
 	target_role_category: string | null;
 	career_goal: string | null;
+	phone_number: string | null;
+	linkedin_url: string | null;
+	github_url: string | null;
+	portfolio_url: string | null;
+	location: string | null;
 	profile_photo_s3_key: string | null;
+	writing_style: string | null;
 	notif_gap_digest: boolean;
 	notif_gen_complete: boolean;
 	notif_sync_complete: boolean;
@@ -24,7 +31,9 @@ type UserRow = {
 	updated_at: Date;
 };
 
-export type Settings = Omit<UserRow, 'password_hash'>;
+export type Settings = Omit<UserRow, 'password_hash'> & {
+	profile_photo_url?: string;
+};
 
 const settingsSelectColumns = `
 	id,
@@ -35,7 +44,13 @@ const settingsSelectColumns = `
 	graduation_year,
 	target_role_category,
 	career_goal,
+	phone_number,
+	linkedin_url,
+	github_url,
+	portfolio_url,
+	location,
 	profile_photo_s3_key,
+	writing_style,
 	notif_gap_digest,
 	notif_gen_complete,
 	notif_sync_complete,
@@ -47,6 +62,21 @@ const toSettings = (user: UserRow): Settings => {
 	const { password_hash: _passwordHash, ...settings } = user;
 	void _passwordHash;
 	return settings;
+};
+
+const withProfilePhotoUrl = async (settings: Settings): Promise<Settings> => {
+	if (!settings.profile_photo_s3_key) {
+		return settings;
+	}
+
+	try {
+		return {
+			...settings,
+			profile_photo_url: await getSignedUrl(settings.profile_photo_s3_key),
+		};
+	} catch {
+		return settings;
+	}
 };
 
 const getUserRowById = async (userId: string): Promise<UserRow> => {
@@ -90,12 +120,12 @@ const updateUser = async (
 		throw new NotFoundError('User not found');
 	}
 
-	return toSettings(user);
+	return withProfilePhotoUrl(toSettings(user));
 };
 
 export const getSettings = async (userId: string): Promise<Settings> => {
 	const user = await getUserRowById(userId);
-	return toSettings(user);
+	return withProfilePhotoUrl(toSettings(user));
 };
 
 export const updateSettingsProfile = async (
@@ -104,25 +134,17 @@ export const updateSettingsProfile = async (
 ): Promise<Settings> => {
 	const updates: Record<string, string | number | null> = {};
 
-	if (input.full_name !== undefined) {
-		updates.full_name = input.full_name;
-	}
-
-	if (input.university !== undefined) {
-		updates.university = input.university;
-	}
-
-	if (input.graduation_year !== undefined) {
-		updates.graduation_year = input.graduation_year;
-	}
-
-	if (input.target_role_category !== undefined) {
-		updates.target_role_category = input.target_role_category;
-	}
-
-	if (input.profile_photo_s3_key !== undefined) {
-		updates.profile_photo_s3_key = input.profile_photo_s3_key;
-	}
+	if (input.full_name !== undefined) updates.full_name = input.full_name;
+	if (input.university !== undefined) updates.university = input.university;
+	if (input.graduation_year !== undefined) updates.graduation_year = input.graduation_year;
+	if (input.target_role_category !== undefined) updates.target_role_category = input.target_role_category;
+	if (input.profile_photo_s3_key !== undefined) updates.profile_photo_s3_key = input.profile_photo_s3_key;
+	if (input.phone_number !== undefined) updates.phone_number = input.phone_number;
+	if (input.linkedin_url !== undefined) updates.linkedin_url = input.linkedin_url;
+	if (input.github_url !== undefined) updates.github_url = input.github_url;
+	if (input.portfolio_url !== undefined) updates.portfolio_url = input.portfolio_url;
+	if (input.location !== undefined) updates.location = input.location;
+	if (input.writing_style !== undefined) updates.writing_style = input.writing_style;
 
 	return updateUser(userId, updates);
 };
@@ -157,6 +179,31 @@ export const updateNotificationSettings = async (
 	return updateUser(userId, updates);
 };
 
+export const uploadProfilePhoto = async (
+	userId: string,
+	buffer: Buffer,
+	mimetype: string,
+	filename: string,
+): Promise<Settings> => {
+	const current = await getUserRowById(userId);
+	const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+	const key = `users/${userId}/profile/${Date.now()}_${safeFilename}`;
+
+	await uploadFile(key, buffer, mimetype);
+
+	const settings = await updateUser(userId, {
+		profile_photo_s3_key: key,
+	});
+
+	if (current.profile_photo_s3_key && current.profile_photo_s3_key !== key) {
+		await deleteFile(current.profile_photo_s3_key).catch(() => {
+			// Replacing the profile photo should not fail because old storage cleanup failed.
+		});
+	}
+
+	return settings;
+};
+
 export const deleteAccount = async (
 	userId: string,
 	password: string,
@@ -165,7 +212,7 @@ export const deleteAccount = async (
 	const passwordMatches = await bcrypt.compare(password, user.password_hash);
 
 	if (!passwordMatches) {
-		throw new UnauthorizedError('Invalid password');
+		throw new ForbiddenError('Invalid password');
 	}
 
 	await pool.query(`DELETE FROM users WHERE id = $1`, [userId]);
