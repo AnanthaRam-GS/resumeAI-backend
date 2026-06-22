@@ -3,6 +3,7 @@ import type { ExtractedEntities, PortfolioItemRecord } from '../../src/types/ai.
 
 const groqCreateMock = vi.fn();
 const geminiGenerateContentMock = vi.fn();
+const nimRequestJsonMock = vi.fn();
 const browserCloseMock = vi.fn();
 const newPageMock = vi.fn();
 const setContentMock = vi.fn();
@@ -35,6 +36,10 @@ vi.mock('@google/generative-ai', () => {
 		GoogleGenerativeAI: MockGenerativeAI,
 	};
 });
+
+vi.mock('../../src/services/nvidia-nim.service.js', () => ({
+	requestNimJson: nimRequestJsonMock,
+}));
 
 vi.mock('puppeteer', () => {
 	return {
@@ -163,16 +168,17 @@ describe('AI services', () => {
 		expect(result.missingKeywords).toEqual(expect.arrayContaining(['system design']));
 	});
 
-	it('analyzes job descriptions with the Groq helper', async () => {
-		groqCreateMock.mockResolvedValueOnce({
-			choices: [{ message: { content: JSON.stringify(extractedEntities) } }],
-		});
+	it('analyzes job descriptions with the NVIDIA NIM helper', async () => {
+		nimRequestJsonMock.mockResolvedValueOnce(extractedEntities);
 		const { analyzeJobDescription } = await loadJdAnalyzer();
 
 		await expect(analyzeJobDescription(jd)).resolves.toMatchObject({
 			requiredSkills: expect.arrayContaining(['TypeScript', 'Node.js']),
 			roleSeniority: 'senior',
 		});
+		expect(nimRequestJsonMock).toHaveBeenCalledWith(
+			expect.objectContaining({ userPrompt: jd, temperature: 0.1 }),
+		);
 	});
 
 	it('ranks relevant portfolio items above unrelated items', async () => {
