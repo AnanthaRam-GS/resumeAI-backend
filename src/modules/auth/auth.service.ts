@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { pool } from '../../db/client.js';
 import { env } from '../../config/env.js';
 import { AppError, ConflictError, NotFoundError, UnauthorizedError } from '../../utils/errors.js';
@@ -16,9 +17,15 @@ type UserRow = {
 	graduation_year: number | null;
 	target_role_category: string | null;
 	career_goal: string | null;
+	phone_number: string | null;
+	linkedin_url: string | null;
+	github_url: string | null;
+	portfolio_url: string | null;
+	location: string | null;
 	onboarding_step: number;
 	onboarding_complete: boolean;
 	profile_photo_s3_key: string | null;
+	writing_style: string | null;
 	notif_gap_digest: boolean;
 	notif_gen_complete: boolean;
 	notif_sync_complete: boolean;
@@ -37,9 +44,15 @@ const userSelectColumns = `
 	graduation_year,
 	target_role_category,
 	career_goal,
+	phone_number,
+	linkedin_url,
+	github_url,
+	portfolio_url,
+	location,
 	onboarding_step,
 	onboarding_complete,
 	profile_photo_s3_key,
+	writing_style,
 	notif_gap_digest,
 	notif_gen_complete,
 	notif_sync_complete,
@@ -129,5 +142,38 @@ export const generateAuthToken = (user: Pick<UserRow, 'id' | 'email'>): string =
 		{
 			expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
 		},
+	);
+};
+
+export const createPasswordResetToken = async (email: string): Promise<{ token: string; exists: boolean }> => {
+	const normalizedEmail = email.trim().toLowerCase();
+	const result = await pool.query<{ id: string }>(`SELECT id FROM users WHERE email = $1 LIMIT 1`, [normalizedEmail]);
+	if (!result.rows[0]) {
+		// Return fake success so we don't leak whether email exists
+		return { token: '', exists: false };
+	}
+	const token = crypto.randomBytes(32).toString('hex');
+	const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+	await pool.query(
+		`UPDATE users SET reset_token = $1, reset_token_expires_at = $2 WHERE email = $3`,
+		[token, expiresAt, normalizedEmail],
+	);
+	return { token, exists: true };
+};
+
+export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
+	const result = await pool.query<{ id: string; reset_token_expires_at: Date }>(
+		`SELECT id, reset_token_expires_at FROM users WHERE reset_token = $1 LIMIT 1`,
+		[token],
+	);
+	const user = result.rows[0];
+	if (!user) throw new NotFoundError('Invalid or expired reset token');
+	if (new Date() > user.reset_token_expires_at) {
+		throw new UnauthorizedError('Reset token has expired. Please request a new one.');
+	}
+	const passwordHash = await bcrypt.hash(newPassword, PASSWORD_SALT_ROUNDS);
+	await pool.query(
+		`UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires_at = NULL WHERE id = $2`,
+		[passwordHash, user.id],
 	);
 };
