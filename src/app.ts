@@ -52,7 +52,11 @@ const registerRoutes = (app: FastifyInstance) => {
 export const buildApp = (): FastifyInstance => {
 	const app = Fastify({ logger: buildLoggerOptions() });
 
-	app.register(cors, { origin: true });
+	app.register(cors, {
+		origin: true,
+		methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+		allowedHeaders: ['Authorization', 'Content-Type'],
+	});
 	app.register(helmet);
 	app.register(rateLimit, {
 		max: 100,
@@ -73,6 +77,21 @@ export const buildApp = (): FastifyInstance => {
 		request.log.error({ err: error }, 'Unhandled error');
 		if (error instanceof AppError) {
 			reply.status(error.statusCode).send(errorResponse(error.message));
+			return;
+		}
+
+		const statusCode =
+			typeof error === 'object' &&
+			error !== null &&
+			'statusCode' in error &&
+			typeof error.statusCode === 'number'
+				? error.statusCode
+				: undefined;
+
+		const message = error instanceof Error ? error.message : 'Request failed';
+
+		if (statusCode && statusCode >= 400) {
+			reply.status(statusCode).send(errorResponse(message));
 			return;
 		}
 
