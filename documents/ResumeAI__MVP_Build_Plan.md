@@ -146,12 +146,11 @@ INSERT into portfolio_items (type-specific fields via JSONB)
 For document uploads:
     +-- Upload file to S3
     +-- Store S3 key in portfolio_items.document_s3_key
-    +-- Call DocumentParserService.parse(s3Key, userId)
-    |     +-- Download file from S3
+    +-- Call DocumentParserService.parse(uploadedBuffer, mimetype, filename)
     |     +-- Extract text (pdf-parse or mammoth)
-    |     +-- POST extracted text to Groq Llama 3.1 8B
+    |     +-- POST extracted text to NVIDIA NIM
     |     |   with structured extraction prompt
-    |     +-- Create portfolio_item records from AI output
+    |     +-- Validate and create portfolio_item records in PostgreSQL from AI output
     +-- Return { extractedItems[], documentId }
     |
     v
@@ -559,7 +558,7 @@ users ---------------------------------------------------------+
 | **A-1** Days 1–2 | `feature/auth-endpoints` | `src/modules/auth/*` | `POST /auth/register` `POST /auth/login` `GET /auth/me` |
 | **A-2** Days 2–5 | `feature/profile-onboarding` | `src/modules/profile/*` | `PATCH /profile/personal` `PATCH /profile/career-goal` `GET /profile/me` `PATCH /profile/onboarding-step` `GET /profile/completeness` |
 | **A-3** Days 3–7 | `feature/portfolio-crud` | `src/modules/portfolio/*` | Full CRUD for `/portfolio/projects`, `/portfolio/experience`, `/portfolio/education`, `/portfolio/skills`, `/portfolio/certifications` |
-| **A-4** Days 6–8 | `feature/document-upload` | `src/modules/documents/*` `src/services/document-parser.service.ts` | `POST /portfolio/upload` → S3 upload → text extraction → Groq parse → portfolio items |
+| **A-4** Days 6–8 | `feature/document-upload` | `src/modules/documents/*` `src/services/document-parser.service.ts` | `POST /portfolio/upload` → S3 upload → text extraction → NVIDIA NIM parse → portfolio items |
 | **A-5** Days 8–9 | `feature/settings` | `src/modules/settings/*` | `PATCH /settings/profile` `PATCH /settings/career-goal` `PATCH /settings/notifications` `DELETE /settings/account` |
 
 ---
@@ -597,7 +596,7 @@ users ---------------------------------------------------------+
 <a name="section-4"></a>
 ## Section 4 — Enterprise Folder Structure
 
-> **Design Principles:** Every module under `src/modules/` is a self-contained vertical slice: routes, controller, service, schema (Zod), and test in one directory. Infrastructure singletons (database, S3, Groq, Gemini) live in `src/services/` and `src/db/`. No module imports from another module's internals — only from `src/services/`, `src/db/`, `src/types/`, and `src/utils/`.
+> **Design Principles:** Every module under `src/modules/` is a self-contained vertical slice: routes, controller, service, schema (Zod), and test in one directory. Infrastructure singletons (database, S3, NVIDIA NIM, Groq, Gemini) live in `src/services/` and `src/db/`. No module imports from another module's internals — only from `src/services/`, `src/db/`, `src/types/`, and `src/utils/`.
 
 ---
 
@@ -708,7 +707,8 @@ resumeai-backend/
 ```
 |   +-- services/                 # Shared infrastructure singletons
 |   |   +-- storage.service.ts           [DEV A] S3 upload/download/signedUrl
-|   |   +-- document-parser.service.ts   [DEV A] pdf-parse + mammoth extraction
+|   |   +-- document-parser.service.ts   [DEV A] pdf-parse + mammoth + NIM extraction
+|   |   +-- nvidia-nim.service.ts        [SHARED] NVIDIA NIM structured response wrapper
 |   |   +-- groq.service.ts              [DEV B] Groq API wrapper + error handling
 |   |   +-- gemini.service.ts            [DEV B] Gemini API wrapper + 429 retry
 |   |   +-- pdf-renderer.service.ts      [DEV B] Puppeteer HTML -> PDF buffer

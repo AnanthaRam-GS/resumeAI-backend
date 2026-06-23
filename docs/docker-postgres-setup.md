@@ -65,9 +65,9 @@ Then fill the required non-database values in `.env`, including:
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_REGION`
 - `AWS_S3_BUCKET`
-- `GROQ_API_KEY` when using Groq-backed flows
+- `NVIDIA_API_KEY` for NVIDIA NIM-backed document upload extraction
+- `GROQ_API_KEY` when using Groq-backed AI flows outside document upload
 - `GEMINI_API_KEY`
-- `NVIDIA_API_KEY`
 
 Set `DATABASE_URL` in `.env` to the Docker URL:
 

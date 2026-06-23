@@ -108,6 +108,7 @@ export const parseDocumentIntoPortfolioItems = async (
 
   const truncatedText = rawText.length > 8000 ? rawText.slice(0, 8000) : rawText;
 
+  // Document upload extraction is routed through NVIDIA NIM structured output.
   const parsed = await requestNimJson<DocumentParserOutput>({
     systemPrompt: documentParserPrompt,
     userPrompt: truncatedText,

@@ -21,16 +21,16 @@ export const processDocumentUpload = async (
 	mimetype: string,
   filename: string,
 ): Promise<DocumentUploadResult> => {
-	// Upload the original document to S3 for record-keeping
+	// Store the original uploaded document in S3 before extraction.
 	const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
 	const documentS3Key = `users/${userId}/uploads/${Date.now()}_${safeFilename}`;
 	await uploadFile(documentS3Key, buffer, mimetype);
 
 	try {
-		// Parse document into structured portfolio items via AI
+		// Parse the uploaded document into structured portfolio items via NVIDIA NIM.
 		const parsedItems = await parseDocumentIntoPortfolioItems(buffer, mimetype, filename);
 
-		// Persist all extracted items, attaching the source document S3 key
+		// Persist extracted items in PostgreSQL, attaching the source document S3 key.
 		const createdItems: PortfolioItem[] = [];
 		for (const item of parsedItems) {
 			const input = createPortfolioItemSchema.safeParse({
