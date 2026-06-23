@@ -177,6 +177,18 @@ describe('parseDocumentIntoPortfolioItems (mocked NIM)', () => {
 			extractTextFromBuffer(Buffer.from('data'), 'image/png', 'photo.png'),
 		).rejects.toThrow('Unsupported file type');
 	});
+
+	it('rejects DOC files as unsupported', async () => {
+		const { extractTextFromBuffer } = await import('../../src/services/document-parser.service.js');
+
+		await expect(
+			extractTextFromBuffer(
+				Buffer.from('legacy-doc'),
+				'application/msword',
+				'resume.doc',
+			),
+		).rejects.toThrow('Unsupported file type');
+	});
 });
 
 describe('processDocumentUpload (mocked)', () => {
@@ -373,13 +385,13 @@ describe('upload middleware', () => {
 		const cases: Array<[string, boolean]> = [
 			['resume.pdf', true],
 			['resume.docx', true],
-			['resume.doc', true],
+			['resume.doc', false],
 			['photo.png', false],
 			['document.txt', false],
 			['spreadsheet.xlsx', false],
 		];
 
-		const supported = new Set(['.pdf', '.docx', '.doc']);
+		const supported = new Set(['.pdf', '.docx']);
 
 		for (const [filename, expected] of cases) {
 			const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase();
@@ -391,13 +403,13 @@ describe('upload middleware', () => {
 		const supportedMimes = new Set([
 			'application/pdf',
 			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-			'application/msword',
 		]);
 
 		expect(supportedMimes.has('application/pdf')).toBe(true);
 		expect(
 			supportedMimes.has('application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
 		).toBe(true);
+		expect(supportedMimes.has('application/msword')).toBe(false);
 		expect(supportedMimes.has('image/jpeg')).toBe(false);
 	});
 });

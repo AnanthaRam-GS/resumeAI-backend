@@ -7,9 +7,8 @@ const IMAGE_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/msword',
 ]);
-const ALLOWED_DOCUMENT_EXTENSIONS = new Set(['.pdf', '.docx', '.doc']);
+const ALLOWED_DOCUMENT_EXTENSIONS = new Set(['.pdf', '.docx']);
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/jpeg',

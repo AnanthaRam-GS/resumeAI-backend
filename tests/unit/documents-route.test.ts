@@ -179,6 +179,39 @@ describe('document upload route', () => {
 		await app.close();
 	});
 
+	it('returns 422 for DOC uploads', async () => {
+		const app = await loadApp();
+		await app.ready();
+
+		const multipart = createMultipartPayload([
+			{
+				name: 'file',
+				filename: 'resume.doc',
+				contentType: 'application/msword',
+				value: Buffer.from('legacy-doc-content'),
+			},
+		]);
+
+		const response = await app.inject({
+			method: 'POST',
+			url: '/portfolio/upload',
+			headers: {
+				authorization: `Bearer ${createToken()}`,
+				'content-type': `multipart/form-data; boundary=${multipart.boundary}`,
+			},
+			payload: multipart.body,
+		});
+
+		expect(response.statusCode).toBe(422);
+		expect(response.json()).toMatchObject({
+			success: false,
+			message: 'Only PDF and DOCX files are supported',
+		});
+		expect(processDocumentUploadMock).not.toHaveBeenCalled();
+
+		await app.close();
+	});
+
 	it('returns 422 for an empty uploaded file', async () => {
 		const app = await loadApp();
 		await app.ready();

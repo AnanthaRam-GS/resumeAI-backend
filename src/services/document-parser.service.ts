@@ -27,7 +27,6 @@ const ALLOWED_TYPES = new Set<string>([
 
 const PDF_MIME = 'application/pdf';
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-const DOC_MIME = 'application/msword';
 
 export const extractTextFromBuffer = async (
   buffer: Buffer,
@@ -44,9 +43,7 @@ export const extractTextFromBuffer = async (
 
   if (
     mimetype === DOCX_MIME ||
-    mimetype === DOC_MIME ||
-    lower.endsWith('.docx') ||
-    lower.endsWith('.doc')
+    lower.endsWith('.docx')
   ) {
     const result = await mammoth.extractRawText({ buffer });
     return result.value.trim();
