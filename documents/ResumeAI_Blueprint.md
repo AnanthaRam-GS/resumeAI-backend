@@ -838,7 +838,7 @@ CREATE INDEX idx_gap_analyses_user    ON gap_analyses(user_id);
 
 | Agent | Task | Primary Model | Fallback | Trigger | Cost |
 |---|---|---|---|---|---|
-| Agent 1 | JD Entity Extraction | Groq: Llama 3.1 8B | Gemini 1.5 Flash | Every generation + doc parse | $0.00 |
+| Agent 1 | JD Entity Extraction | Groq: Llama 3.1 8B | Gemini 1.5 Flash | Every generation | $0.00 |
 | Agent 2 | Embedding Generation | Gemini text-embedding-004 | Nomic Embed (Ollama) | Ingestion + JD embedding | $0.00 |
 | Agent 3 | Selection Algorithm | TypeScript code | — | Every generation | $0.00 |
 | Agent 4 | Resume Content Generation | Gemini 1.5 Flash | Groq: Llama 3.3 70B | Every generation | $0.00 |
@@ -981,9 +981,9 @@ The work is divided **module by module** rather than by layer. Each engineer own
 - BullMQ Worker: `github-sync`
   - Octokit repo fetch → Agent 1 enrichment → validation score → embedding → upsert
   - WebSocket progress events; sync status flag management
-- `POST /portfolio/upload` — generate S3 presigned upload URL
+- `POST /portfolio/upload` — accept multipart upload, store the original file in S3, and persist extracted portfolio items
 - BullMQ Worker: `document-parse`
-  - `pdf-parse` / `mammoth` text extraction → Agent 1 → portfolio item → score → embed
+  - `pdf-parse` / `mammoth` text extraction → NVIDIA NIM structured extraction → portfolio item → score → embed
 
 **Frontend:**
 - GitHub connect button + OAuth redirect handling
@@ -997,7 +997,7 @@ The work is divided **module by module** rather than by layer. Each engineer own
 **Backend (AI Core):**
 - Agent 1: Groq Llama 3.1 8B integration
   - JD extraction prompt (structured JSON output contract)
-  - Document parsing prompt (portfolio item extraction)
+  - Document upload extraction uses NVIDIA NIM instead of Groq
   - Circuit breaker with Gemini Flash fallback
 - Agent 2: Gemini text-embedding-004 integration
   - Single item embedding function

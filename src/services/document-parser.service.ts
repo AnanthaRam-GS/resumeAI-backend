@@ -3,7 +3,10 @@ import mammoth from 'mammoth';
 import { requestNimJson } from './nvidia-nim.service.js';
 import { documentParserPrompt } from '../modules/ai/prompts/document-parser.prompt.js';
 import { ValidationError } from '../utils/errors.js';
-import type { CreatePortfolioItemInput } from '../modules/portfolio/portfolio.schema.js';
+import {
+	createPortfolioItemSchema,
+	type CreatePortfolioItemInput,
+} from '../modules/portfolio/portfolio.schema.js';
 
 type ParsedDocumentItem = Partial<CreatePortfolioItemInput> & {
   type: CreatePortfolioItemInput['type'];
@@ -24,7 +27,6 @@ const ALLOWED_TYPES = new Set<string>([
 
 const PDF_MIME = 'application/pdf';
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-const DOC_MIME = 'application/msword';
 
 export const extractTextFromBuffer = async (
   buffer: Buffer,
@@ -41,9 +43,7 @@ export const extractTextFromBuffer = async (
 
   if (
     mimetype === DOCX_MIME ||
-    mimetype === DOC_MIME ||
-    lower.endsWith('.docx') ||
-    lower.endsWith('.doc')
+    lower.endsWith('.docx')
   ) {
     const result = await mammoth.extractRawText({ buffer });
     return result.value.trim();
@@ -53,8 +53,8 @@ export const extractTextFromBuffer = async (
 };
 
 const normalizeItem = (raw: ParsedDocumentItem): CreatePortfolioItemInput | null => {
-  if (!raw.title?.trim()) return null;
-  if (!raw.type || !ALLOWED_TYPES.has(raw.type)) return null;
+	if (!raw.title?.trim()) return null;
+	if (!raw.type || !ALLOWED_TYPES.has(raw.type)) return null;
 
   const base: CreatePortfolioItemInput = {
     type: raw.type,
@@ -81,7 +81,18 @@ const normalizeItem = (raw: ParsedDocumentItem): CreatePortfolioItemInput | null
   if (raw.cert_url) base.cert_url = raw.cert_url.trim();
   if (raw.skill_name) base.skill_name = raw.skill_name.trim();
 
-  return base;
+	return base;
+};
+
+const validateNormalizedItem = (
+	item: CreatePortfolioItemInput | null,
+): CreatePortfolioItemInput | null => {
+	if (!item) {
+		return null;
+	}
+
+	const parsed = createPortfolioItemSchema.safeParse(item);
+	return parsed.success ? parsed.data : null;
 };
 
 export const parseDocumentIntoPortfolioItems = async (
@@ -97,6 +108,7 @@ export const parseDocumentIntoPortfolioItems = async (
 
   const truncatedText = rawText.length > 8000 ? rawText.slice(0, 8000) : rawText;
 
+  // Document upload extraction is routed through NVIDIA NIM structured output.
   const parsed = await requestNimJson<DocumentParserOutput>({
     systemPrompt: documentParserPrompt,
     userPrompt: truncatedText,
@@ -104,8 +116,14 @@ export const parseDocumentIntoPortfolioItems = async (
     temperature: 0.1,
   });
 
-  const items = parsed.items ?? [];
-  return items
-    .map(normalizeItem)
-    .filter((item): item is CreatePortfolioItemInput => item !== null);
+	const items = (parsed.items ?? [])
+		.map(normalizeItem)
+		.map(validateNormalizedItem)
+		.filter((item): item is CreatePortfolioItemInput => item !== null);
+
+	if (items.length === 0) {
+		throw new ValidationError('No valid portfolio items could be extracted');
+	}
+
+	return items;
 };

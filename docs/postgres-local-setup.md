@@ -105,10 +105,12 @@ AWS_ACCESS_KEY_ID=your-local-aws-key
 AWS_SECRET_ACCESS_KEY=your-local-aws-secret
 AWS_REGION=your-aws-region
 AWS_S3_BUCKET=your-local-or-shared-dev-bucket
+NVIDIA_API_KEY=your-nvidia-key
 GROQ_API_KEY=your-groq-key
 GEMINI_API_KEY=your-gemini-key
-NVIDIA_API_KEY=your-nvidia-key
 ```
+
+`NVIDIA_API_KEY` is required for document upload extraction. `GROQ_API_KEY` remains for other AI modules that still use Groq.
 
 ## .env.test Configuration
 
@@ -125,10 +127,12 @@ AWS_ACCESS_KEY_ID=test-key
 AWS_SECRET_ACCESS_KEY=test-secret
 AWS_REGION=us-east-1
 AWS_S3_BUCKET=resumeai-test-bucket
+NVIDIA_API_KEY=test-nvidia-key
 GROQ_API_KEY=test-groq-key
 GEMINI_API_KEY=test-gemini-key
-NVIDIA_API_KEY=test-nvidia-key
 ```
+
+The document upload path stores original files in S3 and persists extracted portfolio items in PostgreSQL using the same schema as manual portfolio entry.
 
 ## Common Errors
 

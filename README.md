@@ -43,7 +43,7 @@ ResumeAI helps users turn their profile, projects, experience, skills, and targe
 | --- | --- | --- |
 | Resume generation | In progress | Services, routes, orchestration scaffolding exist |
 | Cover letters | In progress | Module code exists |
-| Documents | In progress | Parsing and upload-oriented services exist |
+| Documents | In progress | Multipart upload stores originals in S3 and extracts portfolio items via NVIDIA NIM |
 | Analytics | In progress | ATS and gap-analysis services exist |
 | Frontend app | Planned | Described in planning documents |
 | Browser extension | Planned | Intended for job description capture |
@@ -148,11 +148,14 @@ Common local development keys:
 | `AWS_ACCESS_KEY_ID` | S3 access key |
 | `AWS_SECRET_ACCESS_KEY` | S3 secret key |
 | `AWS_REGION` | S3 region |
-| `AWS_S3_BUCKET` | S3 bucket name |
-| `GROQ_API_KEY` | Groq API key |
+| `AWS_S3_BUCKET` | S3 bucket for original document uploads and generated assets |
+| `NVIDIA_API_KEY` | NVIDIA NIM API key for document upload extraction |
+| `GROQ_API_KEY` | Groq API key for other AI modules |
 | `GEMINI_API_KEY` | Gemini API key |
 
 Do not commit real `.env` files. The repository already ignores `.env`, `.env.local`, `.env.production`, and `.env.staging`.
+
+Current document upload flow stores the original PDF or DOCX in S3, extracts structured portfolio items with NVIDIA NIM, and persists those items in PostgreSQL or Supabase. Groq remains available for unrelated AI modules.
 
 ## Database Setup
 
@@ -230,6 +233,12 @@ Detailed guide: [docs/docker-postgres-setup.md](./docs/docker-postgres-setup.md)
 | `GET` | `/portfolio/items/:id` | Fetch one portfolio item |
 | `PATCH` | `/portfolio/items/:id` | Update a portfolio item |
 | `DELETE` | `/portfolio/items/:id` | Delete a portfolio item |
+
+### Documents
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/portfolio/upload` | Upload a PDF or DOCX, store the original in S3, and extract portfolio items via NVIDIA NIM |
 
 ### Settings
 
@@ -347,7 +356,7 @@ pnpm test:unit
 | Validation | Zod |
 | Database | PostgreSQL |
 | Storage | AWS S3 |
-| AI integrations | Groq, Google Gemini |
+| AI integrations | NVIDIA NIM, Groq, Google Gemini |
 | PDF rendering | Puppeteer |
 | Tests | Vitest |
 
@@ -372,6 +381,7 @@ Shared service layer:
 
 - `src/services/storage.service.ts`
 - `src/services/document-parser.service.ts`
+- `src/services/nvidia-nim.service.ts`
 - `src/services/groq.service.ts`
 - `src/services/gemini.service.ts`
 - `src/services/pdf-renderer.service.ts`

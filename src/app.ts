@@ -15,6 +15,10 @@ import { AppError } from './utils/errors.js';
 import { error as errorResponse } from './utils/response.js';
 
 const buildLoggerOptions = () => {
+	if (env.NODE_ENV === 'test') {
+		return false as const;
+	}
+
 	if (env.NODE_ENV === 'production') {
 		return { level: 'info' } as const;
 	}
