@@ -31,6 +31,7 @@
     "db:local:connect": "psql postgresql://resumeai:resumeai_password@localhost:5432/resumeai_dev",
     "db:test:connect": "psql postgresql://resumeai:resumeai_password@localhost:5432/resumeai_test",
     "db:check": "tsx scripts/check-db-connection.ts",
+    "s3:check": "tsx scripts/smoke-test-s3.ts",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:reset": "tsx src/db/reset.ts"
   },

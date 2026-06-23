@@ -107,6 +107,7 @@ AWS_REGION=your-aws-region
 AWS_S3_BUCKET=your-local-or-shared-dev-bucket
 GROQ_API_KEY=your-groq-key
 GEMINI_API_KEY=your-gemini-key
+NVIDIA_API_KEY=your-nvidia-key
 ```
 
 ## .env.test Configuration
@@ -126,6 +127,7 @@ AWS_REGION=us-east-1
 AWS_S3_BUCKET=resumeai-test-bucket
 GROQ_API_KEY=test-groq-key
 GEMINI_API_KEY=test-gemini-key
+NVIDIA_API_KEY=test-nvidia-key
 ```
 
 ## Common Errors

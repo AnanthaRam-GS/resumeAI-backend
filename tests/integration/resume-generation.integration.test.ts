@@ -24,8 +24,8 @@ vi.mock('../../src/modules/ai/item-selector.service.js', () => ({
   selectPortfolioItems: (scored: any[]) => scored.slice(0, 3).map((s, i) => ({ ...s, selectionRank: i + 1 })),
 }));
 
-vi.mock('../../src/services/groq.service.js', () => ({
-  requestGroqJson: async () => ({
+vi.mock('../../src/services/nvidia-nim.service.js', () => ({
+  requestNimJson: async () => ({
     summary: 'Built cool stuff',
     experience: [],
     projects: [],
