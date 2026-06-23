@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AppError } from '../../src/utils/errors.js';
 
 const requestNimJsonMock = vi.fn();
 const pdfGetTextMock = vi.fn();
@@ -185,6 +186,7 @@ describe('processDocumentUpload (mocked)', () => {
 			text: 'Sample PDF text with TypeScript and Node.js experience at Acme.',
 		});
 		uploadFileMock.mockImplementation(async (key: string) => key);
+		deleteFileMock.mockResolvedValue(true);
 		createPortfolioItemMock.mockImplementation(
 			async (_userId: string, input: Record<string, unknown>) => ({
 				id: `item-${Math.random()}`,
@@ -218,6 +220,7 @@ describe('processDocumentUpload (mocked)', () => {
 			expect.any(Buffer),
 			'application/pdf',
 		);
+		expect(deleteFileMock).not.toHaveBeenCalled();
 	});
 
 	it('creates a portfolio item for each extracted result', async () => {
@@ -294,6 +297,74 @@ describe('processDocumentUpload (mocked)', () => {
 			),
 		).rejects.toThrow('No valid portfolio items could be extracted');
 		expect(createPortfolioItemMock).not.toHaveBeenCalled();
+		expect(deleteFileMock).toHaveBeenCalledTimes(1);
+		expect(deleteFileMock).toHaveBeenCalledWith(
+			expect.stringContaining('users/user-1/uploads/'),
+		);
+	});
+
+	it('deletes the uploaded file when parsing fails after upload', async () => {
+		pdfGetTextMock.mockRejectedValueOnce(new Error('PDF parsing failed'));
+
+		const { processDocumentUpload } = await import('../../src/modules/documents/documents.service.js');
+
+		await expect(
+			processDocumentUpload(
+				'user-3',
+				Buffer.from('bad pdf'),
+				'application/pdf',
+				'broken.pdf',
+			),
+		).rejects.toThrow('PDF parsing failed');
+		expect(uploadFileMock).toHaveBeenCalledTimes(1);
+		expect(deleteFileMock).toHaveBeenCalledTimes(1);
+		expect(createPortfolioItemMock).not.toHaveBeenCalled();
+	});
+
+	it('deletes the uploaded file when portfolio persistence fails', async () => {
+		createPortfolioItemMock.mockRejectedValueOnce(new AppError('DB insert failed', 500));
+
+		const { processDocumentUpload } = await import('../../src/modules/documents/documents.service.js');
+
+		await expect(
+			processDocumentUpload(
+				'user-4',
+				Buffer.from('pdf content'),
+				'application/pdf',
+				'persistence.pdf',
+			),
+		).rejects.toThrow('DB insert failed');
+		expect(deleteFileMock).toHaveBeenCalledTimes(1);
+		expect(deleteFileMock).toHaveBeenCalledWith(
+			expect.stringContaining('users/user-4/uploads/'),
+		);
+	});
+
+	it('preserves the original error when cleanup delete fails', async () => {
+		requestNimJsonMock.mockResolvedValueOnce({
+			items: [
+				{ type: 'project', title: '' },
+			],
+		});
+		deleteFileMock.mockRejectedValueOnce(new Error('Delete failed'));
+
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const { processDocumentUpload } = await import('../../src/modules/documents/documents.service.js');
+
+		await expect(
+			processDocumentUpload(
+				'user-5',
+				Buffer.from('pdf content'),
+				'application/pdf',
+				'cleanup-failure.pdf',
+			),
+		).rejects.toThrow('No valid portfolio items could be extracted');
+		expect(deleteFileMock).toHaveBeenCalledTimes(1);
+		expect(errorSpy).toHaveBeenCalledWith(
+			expect.stringContaining('Failed to cleanup uploaded document'),
+		);
+		errorSpy.mockRestore();
 	});
 });
 
