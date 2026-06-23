@@ -58,6 +58,17 @@ Create your local env file:
 cp .env.example .env
 ```
 
+Then fill the required non-database values in `.env`, including:
+
+- `JWT_SECRET`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `AWS_S3_BUCKET`
+- `GROQ_API_KEY` when using Groq-backed flows
+- `GEMINI_API_KEY`
+- `NVIDIA_API_KEY`
+
 Set `DATABASE_URL` in `.env` to the Docker URL:
 
 ```bash
