@@ -113,7 +113,22 @@ describe('parseDocumentIntoPortfolioItems (mocked NIM)', () => {
 			items: [
 				{ type: 'project', title: '' },
 				{ type: 'unknown-type', title: 'X' },
-				{ type: 'project', title: 'Valid Project' },
+				{
+					type: 'experience',
+					title: 'Broken Dates',
+					start_date: '2024/01/01',
+				},
+				{
+					type: 'skill',
+					title: 'Broken Tech Stack',
+					tech_stack: ['TypeScript', ''],
+				},
+				{
+					type: 'project',
+					title: 'Valid Project',
+					description: 'Built a valid upload-safe project entry',
+					unsupported_field: 'ignored',
+				},
 			],
 		});
 
@@ -129,6 +144,29 @@ describe('parseDocumentIntoPortfolioItems (mocked NIM)', () => {
 
 		expect(items).toHaveLength(1);
 		expect(items[0]?.title).toBe('Valid Project');
+		expect(items[0]).not.toHaveProperty('unsupported_field');
+	});
+
+	it('throws when all extracted items are invalid', async () => {
+		requestNimJsonMock.mockResolvedValueOnce({
+			items: [
+				{ type: 'project', title: '' },
+				{ type: 'experience', title: 'Broken Dates', start_date: '2024/01/01' },
+				{ type: 'skill', title: 'Broken Tech Stack', tech_stack: ['TypeScript', ''] },
+			],
+		});
+
+		const { parseDocumentIntoPortfolioItems } = await import(
+			'../../src/services/document-parser.service.js'
+		);
+
+		await expect(
+			parseDocumentIntoPortfolioItems(
+				Buffer.from('PDF text'),
+				'application/pdf',
+				'resume.pdf',
+			),
+		).rejects.toThrow('No valid portfolio items could be extracted');
 	});
 
 	it('throws ValidationError for unsupported file type', async () => {
@@ -195,22 +233,67 @@ describe('processDocumentUpload (mocked)', () => {
 		expect(result.extractedItemCount).toBe(2);
 		expect(result.extractedItems).toHaveLength(2);
 		expect(createPortfolioItemMock).toHaveBeenCalledTimes(2);
+		expect(createPortfolioItemMock).toHaveBeenNthCalledWith(
+			1,
+			'user-1',
+			expect.objectContaining({
+				source: 'upload',
+				document_filename: 'resume.pdf',
+				document_s3_key: expect.stringContaining('users/user-1/uploads/'),
+			}),
+		);
 	});
 
-	it('returns empty extractedItems when AI returns no valid items', async () => {
-		requestNimJsonMock.mockResolvedValue({ items: [] });
+	it('ignores invalid extracted items and persists valid ones', async () => {
+		requestNimJsonMock.mockResolvedValue({
+			items: [
+				{ type: 'skill', title: 'TypeScript', skill_name: 'TypeScript' },
+				{ type: 'experience', title: 'Broken Dates', start_date: '2024/01/01' },
+			],
+		});
 
 		const { processDocumentUpload } = await import('../../src/modules/documents/documents.service.js');
 
 		const result = await processDocumentUpload(
-			'user-1',
-			Buffer.from('empty PDF'),
+			'user-2',
+			Buffer.from('mixed PDF'),
 			'application/pdf',
-			'blank.pdf',
+			'mixed.pdf',
 		);
 
-		expect(result.extractedItemCount).toBe(0);
-		expect(result.extractedItems).toHaveLength(0);
+		expect(result.extractedItemCount).toBe(1);
+		expect(result.extractedItems).toHaveLength(1);
+		expect(createPortfolioItemMock).toHaveBeenCalledTimes(1);
+		expect(createPortfolioItemMock).toHaveBeenCalledWith(
+			'user-2',
+			expect.objectContaining({
+				type: 'skill',
+				title: 'TypeScript',
+				source: 'upload',
+				document_filename: 'mixed.pdf',
+			}),
+		);
+	});
+
+	it('fails the upload when no valid extracted items remain', async () => {
+		requestNimJsonMock.mockResolvedValue({
+			items: [
+				{ type: 'project', title: '' },
+				{ type: 'experience', title: 'Broken Dates', start_date: '2024/01/01' },
+			],
+		});
+
+		const { processDocumentUpload } = await import('../../src/modules/documents/documents.service.js');
+
+		await expect(
+			processDocumentUpload(
+				'user-1',
+				Buffer.from('empty PDF'),
+				'application/pdf',
+				'blank.pdf',
+			),
+		).rejects.toThrow('No valid portfolio items could be extracted');
+		expect(createPortfolioItemMock).not.toHaveBeenCalled();
 	});
 });
 

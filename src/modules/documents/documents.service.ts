@@ -1,7 +1,12 @@
 import { uploadFile } from '../../services/storage.service.js';
 import { parseDocumentIntoPortfolioItems } from '../../services/document-parser.service.js';
 import { createPortfolioItem } from '../portfolio/portfolio.service.js';
+import {
+	createPortfolioItemSchema,
+	type CreatePortfolioItemInput,
+} from '../portfolio/portfolio.schema.js';
 import type { PortfolioItem } from '../portfolio/portfolio.service.js';
+import { ValidationError } from '../../utils/errors.js';
 
 export interface DocumentUploadResult {
   documentS3Key: string;
@@ -11,9 +16,9 @@ export interface DocumentUploadResult {
 }
 
 export const processDocumentUpload = async (
-  userId: string,
-  buffer: Buffer,
-  mimetype: string,
+	userId: string,
+	buffer: Buffer,
+	mimetype: string,
   filename: string,
 ): Promise<DocumentUploadResult> => {
   // Upload the original document to S3 for record-keeping
@@ -24,17 +29,23 @@ export const processDocumentUpload = async (
   // Parse document into structured portfolio items via AI
   const parsedItems = await parseDocumentIntoPortfolioItems(buffer, mimetype, filename);
 
-  // Persist all extracted items, attaching the source document S3 key
-  const createdItems: PortfolioItem[] = [];
-  for (const item of parsedItems) {
-    const created = await createPortfolioItem(userId, {
-      ...item,
-      source: 'upload',
-      document_s3_key: documentS3Key,
-      document_filename: filename,
-    });
-    createdItems.push(created);
-  }
+	// Persist all extracted items, attaching the source document S3 key
+	const createdItems: PortfolioItem[] = [];
+	for (const item of parsedItems) {
+		const input = createPortfolioItemSchema.safeParse({
+			...item,
+			source: 'upload',
+			document_s3_key: documentS3Key,
+			document_filename: filename,
+		});
+
+		if (!input.success) {
+			throw new ValidationError('No valid portfolio items could be extracted');
+		}
+
+		const created = await createPortfolioItem(userId, input.data as CreatePortfolioItemInput);
+		createdItems.push(created);
+	}
 
   return {
     documentS3Key,
