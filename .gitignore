@@ -8,6 +8,7 @@ dist/
 
 # Environment — NEVER commit real .env files
 .env
+.env.test
 .env.local
 .env.production
 .env.staging

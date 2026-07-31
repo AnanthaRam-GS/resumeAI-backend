@@ -18,6 +18,12 @@ const s3Client = new S3Client({
 	},
 });
 
+const ensureStorageConfigured = (): void => {
+	if (!env.AWS_ACCESS_KEY_ID || !env.AWS_SECRET_ACCESS_KEY || !env.AWS_S3_BUCKET) {
+		throw new AppError('File storage is not configured for this environment', 503, 'STORAGE_NOT_CONFIGURED');
+	}
+};
+
 const wrapStorageError = (message: string): AppError => {
 	return new AppError(message, 502);
 };
@@ -27,6 +33,7 @@ export const uploadFile = async (
 	buffer: Buffer,
 	contentType: string,
 ): Promise<string> => {
+	ensureStorageConfigured();
 	try {
 		await s3Client.send(
 			new PutObjectCommand({
@@ -47,6 +54,7 @@ export const getSignedUrl = async (
 	key: string,
 	expiresIn = DEFAULT_SIGNED_URL_EXPIRY_SECONDS,
 ): Promise<string> => {
+	ensureStorageConfigured();
 	try {
 		return await presignUrl(
 			s3Client,
@@ -61,7 +69,28 @@ export const getSignedUrl = async (
 	}
 };
 
+export const downloadFile = async (key: string): Promise<Buffer> => {
+	ensureStorageConfigured();
+	try {
+		const result = await s3Client.send(
+			new GetObjectCommand({
+				Bucket: env.AWS_S3_BUCKET,
+				Key: key,
+			}),
+		);
+		if (!result.Body) throw new Error('Empty storage body');
+		const chunks: Buffer[] = [];
+		for await (const chunk of result.Body as AsyncIterable<Uint8Array>) {
+			chunks.push(Buffer.from(chunk));
+		}
+		return Buffer.concat(chunks);
+	} catch {
+		throw wrapStorageError('Failed to download file from storage');
+	}
+};
+
 export const deleteFile = async (key: string): Promise<boolean> => {
+	ensureStorageConfigured();
 	try {
 		await s3Client.send(
 			new DeleteObjectCommand({

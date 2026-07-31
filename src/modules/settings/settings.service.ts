@@ -27,6 +27,8 @@ type UserRow = {
 	notif_gap_digest: boolean;
 	notif_gen_complete: boolean;
 	notif_sync_complete: boolean;
+	analytics_opt_out: boolean;
+	weekly_digest_opt_in: boolean;
 	created_at: Date;
 	updated_at: Date;
 };
@@ -54,6 +56,8 @@ const settingsSelectColumns = `
 	notif_gap_digest,
 	notif_gen_complete,
 	notif_sync_complete,
+	analytics_opt_out,
+	weekly_digest_opt_in,
 	created_at,
 	updated_at
 `;
@@ -174,6 +178,12 @@ export const updateNotificationSettings = async (
 
 	if (input.notif_sync_complete !== undefined) {
 		updates.notif_sync_complete = input.notif_sync_complete;
+	}
+	if (input.analytics_opt_out !== undefined) {
+		updates.analytics_opt_out = input.analytics_opt_out;
+	}
+	if (input.weekly_digest_opt_in !== undefined) {
+		updates.weekly_digest_opt_in = input.weekly_digest_opt_in;
 	}
 
 	return updateUser(userId, updates);

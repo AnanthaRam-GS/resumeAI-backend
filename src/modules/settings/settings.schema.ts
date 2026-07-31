@@ -35,6 +35,8 @@ export const updateNotificationSettingsSchema = z
 		notif_gap_digest: z.boolean().optional(),
 		notif_gen_complete: z.boolean().optional(),
 		notif_sync_complete: z.boolean().optional(),
+		analytics_opt_out: z.boolean().optional(),
+		weekly_digest_opt_in: z.boolean().optional(),
 	})
 	.refine((data) => Object.keys(data).length > 0, {
 		message: 'At least one field must be provided',

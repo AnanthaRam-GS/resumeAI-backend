@@ -1,0 +1,75 @@
+name: Backend Deploy Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_supabase_check:
+        description: "Run Supabase db:check using GitHub Actions secrets"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare test environment
+        run: cp .env.test.example .env.test
+
+      - name: Validate environment examples
+        run: pnpm env:validate
+
+      - name: Audit dependencies
+        run: pnpm audit
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Optional Supabase connectivity check
+        if: ${{ inputs.run_supabase_check == 'true' }}
+        run: pnpm db:check
+        env:
+          NODE_ENV: production
+          USE_SUPABASE: "true"
+          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          PGSSLMODE: require
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          NVIDIA_NIM_API_KEY: ${{ secrets.NVIDIA_NIM_API_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}

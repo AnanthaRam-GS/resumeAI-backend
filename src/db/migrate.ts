@@ -1,9 +1,11 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pool } from './client.js';
+import { env } from '../config/env.js';
+import { createDatabasePool } from './client.js';
 
 const MIGRATIONS_TABLE = 'schema_migrations';
+const pool = createDatabasePool(env.DIRECT_URL ?? env.DATABASE_URL);
 
 const getMigrationsDir = () => {
 	const currentDir = path.dirname(fileURLToPath(import.meta.url));

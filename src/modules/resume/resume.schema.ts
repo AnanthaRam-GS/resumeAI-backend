@@ -1,11 +1,21 @@
 import { z } from 'zod';
+import { SUPPORTED_OUTPUT_LANGUAGES } from '../../services/language.service.js';
+
+const outputLanguageCodes = SUPPORTED_OUTPUT_LANGUAGES.map((language) => language.code) as [
+  string,
+  ...string[],
+];
 
 export const generateResumeSchema = z.object({
   jobTitle: z.string().trim().min(1, 'Job title is required'),
   companyName: z.string().trim().min(1, 'Company name is required'),
   jobDescription: z.string().trim().min(50, 'Job description must be at least 50 characters'),
-  templateId: z.enum(['modern', 'academic', 'minimal']).optional(),
+  templateId: z.string().trim().min(1, 'Template ID is required when provided').optional(),
   pageLength: z.enum(['1-page', '1.5-page']).optional(),
+  outputLanguage: z.enum(outputLanguageCodes).optional(),
+  jobTargetId: z.uuid('Job target ID must be a valid UUID').optional(),
+  projectCount: z.number().int().min(1, 'Project count must be at least 1').max(8, 'Project count cannot exceed 8').optional(),
+  selectedProjectIds: z.array(z.uuid('Selected project ID must be a valid UUID')).max(8).optional(),
 });
 
 export const generationStatusParamsSchema = z.object({

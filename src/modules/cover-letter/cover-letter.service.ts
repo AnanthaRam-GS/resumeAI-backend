@@ -6,6 +6,7 @@ import { uploadFile, getSignedUrl } from '../../services/storage.service.js';
 import { coverLetterPrompt } from '../ai/prompts/cover-letter.prompt.js';
 import type { GenerateCoverLetterInput } from './cover-letter.schema.js';
 import type { CoverLetterRow } from '../../types/resume.types.js';
+import { assertSupportedOutputLanguage, getLanguageLabel } from '../../services/language.service.js';
 
 type CoverLetterGenerationPayload = {
   jobTitle: string;
@@ -22,6 +23,8 @@ type CoverLetterGenerationPayload = {
     tech_stack?: string[] | null;
     company_name?: string | null;
   }>;
+  outputLanguage: string;
+  outputLanguageLabel: string;
 };
 
 type GeneratedCoverLetter = {
@@ -75,6 +78,8 @@ export const generateCoverLetter = async (
   resumeVersionId: string,
   input: GenerateCoverLetterInput,
 ): Promise<CoverLetterRow & { pdf_signed_url?: string; content?: string }> => {
+  const outputLanguage = assertSupportedOutputLanguage(input.outputLanguage);
+  const outputLanguageLabel = getLanguageLabel(outputLanguage);
   // Fetch resume version and verify ownership
   const versionResult = await pool.query<{
     id: string;
@@ -139,11 +144,13 @@ export const generateCoverLetter = async (
     tone: input.tone,
     highlightNote: input.highlightNote,
     selectedItems,
+    outputLanguage,
+    outputLanguageLabel,
   };
 
   // Generate via Groq
   const generated = await requestNimJson<GeneratedCoverLetter>({
-    systemPrompt: coverLetterPrompt,
+    systemPrompt: `${coverLetterPrompt}\n\nOutput language: ${outputLanguageLabel}. Preserve names, companies, URLs, technologies, product names, code identifiers, and numeric metrics exactly unless normal grammar requires surrounding translated words.`,
     userPrompt: JSON.stringify(payload),
     maxTokens: 1024,
     temperature: 0.4,
@@ -167,10 +174,10 @@ export const generateCoverLetter = async (
 
   // Store cover letter in DB
   const clResult = await pool.query<CoverLetterRow>(
-    `INSERT INTO cover_letters (user_id, resume_version_id, why_company, tone, highlight_note, content_text, pdf_s3_key)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)
+    `INSERT INTO cover_letters (user_id, resume_version_id, why_company, tone, highlight_note, content_text, pdf_s3_key, output_language)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
      RETURNING *`,
-    [userId, resumeVersionId, input.whyCompany, input.tone, input.highlightNote ?? null, letterText, pdfKey],
+    [userId, resumeVersionId, input.whyCompany, input.tone, input.highlightNote ?? null, letterText, pdfKey, outputLanguage],
   );
   const coverLetter = clResult.rows[0]!;
 

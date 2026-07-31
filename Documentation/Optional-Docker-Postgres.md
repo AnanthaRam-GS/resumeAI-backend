@@ -1,10 +1,10 @@
 # Docker PostgreSQL Setup
 
-ResumeAI Backend now supports a Docker Compose PostgreSQL setup so both developers can run the same database environment consistently without depending on a machine-specific Homebrew installation.
+ResumeAI Backend supports a Docker Compose PostgreSQL setup so developers can run the same database environment consistently without depending on a machine-specific Homebrew installation.
 
 ## Why Docker Setup Exists
 
-- It standardizes the PostgreSQL runtime across the team
+- It standardizes the PostgreSQL and pgvector runtime across the team
 - It avoids local machine drift between developers
 - It keeps the existing Homebrew workflow available for anyone who intentionally wants it
 
@@ -19,24 +19,24 @@ Homebrew/local PostgreSQL:
 Docker PostgreSQL:
 
 - host: `localhost`
-- port: `5433`
-- runs PostgreSQL 15 in Docker Compose
+- port: `5434`
+- runs PostgreSQL 16 with pgvector in Docker Compose
 - recommended team default to keep both developers aligned
 
 ## Recommended Team Default
 
-Use Docker PostgreSQL on host port `5433`.
+Use Docker PostgreSQL on host port `5434`.
 
 Docker development URL:
 
 ```bash
-DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5433/resumeai_dev
+LOCAL_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5434/resumeai_dev
 ```
 
 Docker test URL:
 
 ```bash
-DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5433/resumeai_test
+LOCAL_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5434/resumeai_test
 ```
 
 ## Prerequisites
@@ -65,22 +65,37 @@ Then fill the required non-database values in `.env`, including:
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_REGION`
 - `AWS_S3_BUCKET`
-- `NVIDIA_API_KEY` for NVIDIA NIM-backed document upload extraction
+- `NVIDIA_NIM_API_KEY` or the legacy `NVIDIA_API_KEY` for NVIDIA NIM-backed document upload extraction
 - `GROQ_API_KEY` when using Groq-backed AI flows outside document upload
 - `GEMINI_API_KEY`
 
-Set `DATABASE_URL` in `.env` to the Docker URL:
+Set local database mode in `.env`:
 
 ```bash
-DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5433/resumeai_dev
+USE_SUPABASE=false
+LOCAL_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5434/resumeai_dev
+WORKERS_ENABLED=false
 ```
 
-Run migrations, verify the connection, and start the API:
+Run migrations, seed data, verify the connection, and start the API:
 
 ```bash
 pnpm db:migrate
+pnpm db:seed
 pnpm db:check
 pnpm dev
+```
+
+Or run the combined setup command:
+
+```bash
+pnpm db:docker:init
+```
+
+Seeded local login:
+
+```text
+student@example.com / Password123!
 ```
 
 ## Manual Verification
@@ -109,7 +124,7 @@ pnpm db:docker:test:connect
 Use this test URL when needed:
 
 ```bash
-DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5433/resumeai_test
+LOCAL_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5434/resumeai_test
 ```
 
 ## Resetting Docker PostgreSQL
@@ -119,6 +134,7 @@ To delete the Docker database volume and recreate both databases:
 ```bash
 pnpm db:docker:reset
 pnpm db:migrate
+pnpm db:seed
 ```
 
 ## Common Errors
@@ -128,9 +144,9 @@ pnpm db:migrate
 - Start Docker Desktop
 - Re-run `pnpm db:docker:up`
 
-`port 5433 already in use`
+`port 5434 already in use`
 
-- Stop the process bound to `5433`
+- Stop the process bound to `5434`
 - Or change the mapped host port if the team intentionally updates the standard
 
 `container already exists`
@@ -142,6 +158,7 @@ pnpm db:migrate
 
 - Re-run `pnpm db:docker:reset`
 - Re-run `pnpm db:migrate`
+- Re-run `pnpm db:seed` if you want the standard development data
 
 `init scripts not re-running because volume already exists`
 
@@ -154,8 +171,9 @@ pnpm db:migrate
 
 ## Team Instructions
 
-Both developers should use the same Docker `DATABASE_URL` unless they intentionally choose the Homebrew/local setup:
+Both developers should use the same Docker `LOCAL_DATABASE_URL` unless they intentionally choose the Homebrew/local setup:
 
 ```bash
-DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5433/resumeai_dev
+USE_SUPABASE=false
+LOCAL_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5434/resumeai_dev
 ```

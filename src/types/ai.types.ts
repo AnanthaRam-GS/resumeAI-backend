@@ -3,7 +3,8 @@ export type PortfolioItemType =
 	| 'experience'
 	| 'education'
 	| 'skill'
-	| 'certification';
+	| 'certification'
+	| 'research_paper';
 
 export type PortfolioItemSource = 'manual' | 'upload' | 'github';
 

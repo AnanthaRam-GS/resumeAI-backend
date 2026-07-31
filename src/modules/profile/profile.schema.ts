@@ -29,8 +29,8 @@ export const updateCareerGoalSchema = z.object({
 export const updateOnboardingStepSchema = z.object({
 	onboarding_step: z
 		.int('Onboarding step must be an integer')
-		.min(1, 'Onboarding step must be between 1 and 6')
-		.max(6, 'Onboarding step must be between 1 and 6'),
+		.min(1, 'Onboarding step must be between 1 and 8')
+		.max(8, 'Onboarding step must be between 1 and 8'),
 	onboarding_complete: z.boolean().optional(),
 });
 

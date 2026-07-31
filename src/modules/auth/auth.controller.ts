@@ -70,7 +70,7 @@ export const login = async (request: FastifyRequest, reply: FastifyReply) => {
 	const user = await findUserByEmail(email);
 
 	if (!user) {
-		throw new UnauthorizedError('Invalid email or password');
+		throw new UnauthorizedError('User not found. Please create an account.', 'USER_NOT_FOUND');
 	}
 
 	await verifyPassword(password, user.password_hash);

@@ -3,6 +3,7 @@ import { ValidationError } from '../utils/errors.js';
 
 const DOCUMENT_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const IMAGE_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const ZIP_MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
 
 const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
   'application/pdf',
@@ -16,6 +17,13 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/webp',
 ]);
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+
+const ALLOWED_ZIP_MIME_TYPES = new Set([
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/octet-stream',
+]);
+const ALLOWED_ZIP_EXTENSIONS = new Set(['.zip']);
 
 export interface UploadedFile {
   filename: string;
@@ -102,5 +110,15 @@ export const parseImageUpload: preHandlerHookHandler = async (request: FastifyRe
     maxFileSizeBytes: IMAGE_MAX_FILE_SIZE_BYTES,
     invalidTypeMessage: 'Only JPG, PNG, and WebP images are supported',
     maxSizeMessage: 'Image size must not exceed 5 MB',
+  });
+};
+
+export const parseZipUpload: preHandlerHookHandler = async (request: FastifyRequest) => {
+  await parseMultipartFile(request, {
+    allowedMimeTypes: ALLOWED_ZIP_MIME_TYPES,
+    allowedExtensions: ALLOWED_ZIP_EXTENSIONS,
+    maxFileSizeBytes: ZIP_MAX_FILE_SIZE_BYTES,
+    invalidTypeMessage: 'Only ZIP files are supported',
+    maxSizeMessage: 'ZIP file size must not exceed 15 MB',
   });
 };

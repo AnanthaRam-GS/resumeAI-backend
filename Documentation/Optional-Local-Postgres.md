@@ -1,10 +1,11 @@
 # Local PostgreSQL Setup
 
-ResumeAI Backend uses local PostgreSQL 15.x for developer workflows right now so both developers can run migrations, the API, and live endpoint checks against the same database standard without Docker.
+ResumeAI Backend can use a locally installed PostgreSQL server for developer workflows. Docker remains the most portable path because the current migrations require pgvector.
 
 ## Required Version
 
 - PostgreSQL 15.x or a compatible local installation
+- pgvector installed and available to the target database
 - Current reference version on the team machine: `psql (PostgreSQL) 15.15 (Homebrew)`
 
 ## Local Database Standard
@@ -28,7 +29,8 @@ Test database:
 Connection strings:
 
 ```bash
-DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5432/resumeai_dev
+USE_SUPABASE=false
+LOCAL_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5432/resumeai_dev
 TEST_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5432/resumeai_test
 ```
 
@@ -39,6 +41,7 @@ Developer A and Developer B should both run:
 ```bash
 pnpm db:local:setup
 pnpm db:migrate
+pnpm db:seed
 pnpm dev
 ```
 
@@ -84,7 +87,7 @@ You should see the application tables and the recorded migration filenames.
 
 ## Resetting the Database
 
-To reset the current database defined by `DATABASE_URL` and re-run migrations:
+To reset the currently selected local database and re-run migrations:
 
 ```bash
 pnpm db:reset
@@ -97,8 +100,10 @@ Your local `.env` should use:
 ```bash
 PORT=3000
 NODE_ENV=development
-DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5432/resumeai_dev
+USE_SUPABASE=false
+LOCAL_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5432/resumeai_dev
 TEST_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5432/resumeai_test
+WORKERS_ENABLED=false
 JWT_SECRET=your-local-jwt-secret-with-at-least-32-characters
 JWT_EXPIRES_IN=7d
 AWS_ACCESS_KEY_ID=your-local-aws-key
@@ -119,7 +124,8 @@ Your local `.env.test` should use:
 ```bash
 NODE_ENV=test
 PORT=3001
-DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5432/resumeai_test
+USE_SUPABASE=false
+LOCAL_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5432/resumeai_test
 TEST_DATABASE_URL=postgresql://resumeai:resumeai_password@localhost:5432/resumeai_test
 JWT_SECRET=test-jwt-secret-that-is-at-least-32-characters-long
 JWT_EXPIRES_IN=1h
@@ -151,6 +157,11 @@ The document upload path stores original files in S3 and persists extracted port
 - Make sure PostgreSQL is running
 - Retry `pnpm db:local:setup`
 - If Homebrew service startup fails, run `brew services start postgresql@15` manually
+
+`extension "vector" is not available`
+
+- Install pgvector for your local PostgreSQL version
+- Or use the Docker setup with `pnpm db:docker:init`
 
 `port already in use`
 

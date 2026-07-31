@@ -63,5 +63,115 @@
         { "name": "Performance Tuning", "synonyms": ["performance", "profiling"] }
       ]
     }
+  ],
+
+  "clusters": [
+    {
+      "name": "Backend Infrastructure",
+      "skills": ["Kubernetes", "Docker", "Terraform", "CI/CD", "Service Mesh", "Helm"],
+      "prerequisites": ["Docker"],
+      "seniorityGate": "mid"
+    },
+    {
+      "name": "Distributed Systems",
+      "skills": ["Microservices", "Message Queues", "Event-Driven Architecture", "Redis", "Kafka", "RabbitMQ"],
+      "prerequisites": ["REST APIs", "Database Design"],
+      "seniorityGate": "senior"
+    },
+    {
+      "name": "System Design",
+      "skills": ["System Design", "Scalability", "High Availability", "Load Balancing", "Caching Strategies", "Database Sharding"],
+      "prerequisites": ["Distributed Systems", "Backend Infrastructure"],
+      "seniorityGate": "senior"
+    },
+    {
+      "name": "Frontend Frameworks",
+      "skills": ["React", "Next.js", "Vue.js", "Angular", "TypeScript", "State Management"],
+      "prerequisites": ["HTML", "CSS", "JavaScript"],
+      "seniorityGate": "junior"
+    },
+    {
+      "name": "Machine Learning Core",
+      "skills": ["Machine Learning", "Neural Networks", "Feature Engineering", "Model Training", "scikit-learn"],
+      "prerequisites": ["Python", "Statistics", "Linear Algebra"],
+      "seniorityGate": "mid"
+    },
+    {
+      "name": "LLM Engineering",
+      "skills": ["LLM", "Prompt Engineering", "RAG", "Fine-tuning", "LangChain", "Vector Databases"],
+      "prerequisites": ["Machine Learning Core", "Python"],
+      "seniorityGate": "mid"
+    },
+    {
+      "name": "Data Engineering",
+      "skills": ["Data Pipelines", "ETL", "Spark", "Airflow", "Data Warehousing", "dbt"],
+      "prerequisites": ["SQL", "Python"],
+      "seniorityGate": "mid"
+    },
+    {
+      "name": "Cloud Platforms",
+      "skills": ["AWS", "GCP", "Azure", "Serverless", "Cloud Architecture"],
+      "prerequisites": ["Backend Infrastructure", "Linux"],
+      "seniorityGate": "mid"
+    },
+    {
+      "name": "Mobile Development",
+      "skills": ["React Native", "Flutter", "Swift", "Kotlin", "Android", "iOS"],
+      "prerequisites": [],
+      "seniorityGate": "junior"
+    },
+    {
+      "name": "Database Internals",
+      "skills": ["Database Design", "PostgreSQL", "Query Optimization", "Indexing", "Transactions", "ACID"],
+      "prerequisites": ["SQL"],
+      "seniorityGate": "mid"
+    }
+  ],
+
+  "careerGoalMaps": [
+    {
+      "pattern": "senior backend",
+      "requiredClusters": [
+        { "cluster": "System Design", "weight": 0.9 },
+        { "cluster": "Backend Infrastructure", "weight": 0.8 },
+        { "cluster": "Database Internals", "weight": 0.7 },
+        { "cluster": "Distributed Systems", "weight": 0.8 },
+        { "cluster": "Cloud Platforms", "weight": 0.6 }
+      ]
+    },
+    {
+      "pattern": "machine learning engineer",
+      "requiredClusters": [
+        { "cluster": "Machine Learning Core", "weight": 0.9 },
+        { "cluster": "Data Engineering", "weight": 0.7 },
+        { "cluster": "LLM Engineering", "weight": 0.5 },
+        { "cluster": "Cloud Platforms", "weight": 0.5 }
+      ]
+    },
+    {
+      "pattern": "full stack",
+      "requiredClusters": [
+        { "cluster": "Frontend Frameworks", "weight": 0.8 },
+        { "cluster": "Backend Infrastructure", "weight": 0.7 },
+        { "cluster": "Database Internals", "weight": 0.6 },
+        { "cluster": "Cloud Platforms", "weight": 0.5 }
+      ]
+    },
+    {
+      "pattern": "devops",
+      "requiredClusters": [
+        { "cluster": "Backend Infrastructure", "weight": 0.9 },
+        { "cluster": "Cloud Platforms", "weight": 0.9 },
+        { "cluster": "System Design", "weight": 0.6 }
+      ]
+    },
+    {
+      "pattern": "data engineer",
+      "requiredClusters": [
+        { "cluster": "Data Engineering", "weight": 0.9 },
+        { "cluster": "Database Internals", "weight": 0.8 },
+        { "cluster": "Cloud Platforms", "weight": 0.6 }
+      ]
+    }
   ]
 }

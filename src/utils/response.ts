@@ -7,6 +7,7 @@ export type SuccessResponse<T> = {
 export type ErrorResponse = {
 	success: false;
 	message: string;
+	code?: string;
 };
 
 export const success = <T>(data: T, message?: string): SuccessResponse<T> => {
@@ -17,9 +18,17 @@ export const success = <T>(data: T, message?: string): SuccessResponse<T> => {
 	return { success: true, data, message };
 };
 
-export const error = (message: string): ErrorResponse => {
+export const error = (message: string, code?: string): ErrorResponse => {
+	if (code === undefined) {
+		return {
+			success: false,
+			message,
+		};
+	}
+
 	return {
 		success: false,
 		message,
+		code,
 	};
 };

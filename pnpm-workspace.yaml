@@ -1,6 +1,15 @@
 packages:
   - "."
 
+overrides:
+  esbuild: ^0.28.1
+
+allowBuilds:
+  bcrypt: true
+  esbuild: true
+  msgpackr-extract: true
+  puppeteer: true
+
 onlyBuiltDependencies:
   - bcrypt
   - esbuild

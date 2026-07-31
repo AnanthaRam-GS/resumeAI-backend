@@ -123,21 +123,174 @@ describe('resume.schema', () => {
       jobTitle: 'Backend Engineer',
       companyName: 'Acme',
       jobDescription: 'Build scalable backend services using Node.js and TypeScript with PostgreSQL.',
-      templateId: 'modern',
+      templateId: 'technical-modern',
     });
-    expect(parsed.templateId).toBe('modern');
+    expect(parsed.templateId).toBe('technical-modern');
   });
 
-  it('rejects invalid templateId', async () => {
+  it('accepts project count and manual selected project ids', async () => {
+    const { generateResumeSchema } = await import('./resume.schema.js');
+    const parsed = generateResumeSchema.parse({
+      jobTitle: 'Backend Engineer',
+      companyName: 'Acme',
+      jobDescription: 'Build scalable backend services using Node.js and TypeScript with PostgreSQL.',
+      projectCount: 3,
+      selectedProjectIds: ['550e8400-e29b-41d4-a716-446655440000'],
+    });
+
+    expect(parsed.projectCount).toBe(3);
+    expect(parsed.selectedProjectIds).toHaveLength(1);
+  });
+
+  it('rejects invalid project count', async () => {
     const { generateResumeSchema } = await import('./resume.schema.js');
     expect(() =>
       generateResumeSchema.parse({
         jobTitle: 'Engineer',
         companyName: 'Acme',
         jobDescription: 'Build scalable backend services using Node.js and TypeScript with PostgreSQL.',
-        templateId: 'invalid-template',
+        projectCount: 0,
       }),
     ).toThrow();
+  });
+
+  it('accepts unknown templateId values for renderer fallback', async () => {
+    const { generateResumeSchema } = await import('./resume.schema.js');
+    const parsed = generateResumeSchema.parse({
+      jobTitle: 'Engineer',
+      companyName: 'Acme',
+      jobDescription: 'Build scalable backend services using Node.js and TypeScript with PostgreSQL.',
+      templateId: 'invalid-template',
+    });
+    expect(parsed.templateId).toBe('invalid-template');
+  });
+});
+
+describe('resume template registry', () => {
+  const completeContent = {
+    summary: 'Backend engineer focused on TypeScript APIs and measurable product impact.',
+    skills: {
+      Programming: ['TypeScript', 'Python'],
+      Backend: ['Node.js', 'PostgreSQL'],
+    },
+    experience: [
+      {
+        role: 'Software Engineer',
+        company: 'Acme',
+        period: '2024 - Present',
+        bullets: ['Built APIs for 20k monthly users.', 'Built APIs for 20k monthly users.'],
+      },
+    ],
+    projects: [
+      {
+        name: 'Resume Builder',
+        description: 'AI resume generation workflow.',
+        tech_stack: ['React', 'Fastify'],
+        bullets: ['Rendered ATS-safe PDFs with selectable text.'],
+      },
+    ],
+    researchPapers: [
+      {
+        title: 'Efficient Edge-Cloud Sepsis Prediction',
+        authors: ['Ada Lovelace', 'Grace Hopper'],
+        venue: 'IEEE Health AI Conference',
+        year: '2025',
+        doi: '10.1109/example.2025.1',
+        arxivUrl: 'https://arxiv.org/abs/2501.12345',
+        publicationUrl: 'https://ieeexplore.ieee.org/document/1',
+        githubUrl: 'https://github.com/example/paper-code',
+        description: 'Preserved abstract text.',
+        keywords: ['LSTM', 'GRU'],
+        status: 'published',
+      },
+    ],
+    education: [{ degree: 'B.Tech Computer Science', institution: 'State University', period: '2020 - 2024' }],
+    certifications: [{ name: 'AWS Cloud Practitioner', issuer: 'AWS', date: '2024' }],
+    achievements: ['Won campus hackathon.'],
+  };
+
+  it('contains unique template IDs and the three additional templates', async () => {
+    const { resumeTemplates } = await import('./templates/index.js');
+    const ids = resumeTemplates.map((template) => template.id);
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        'primary',
+        'classic-professional',
+        'technical-modern',
+        'executive-minimal',
+      ]),
+    );
+  });
+
+  it('falls back to primary for unknown template IDs', async () => {
+    const { normalizeResumeTemplateId } = await import('./templates/index.js');
+
+    expect(normalizeResumeTemplateId('unknown')).toBe('primary');
+    expect(normalizeResumeTemplateId('academic')).toBe('primary');
+  });
+
+  it('renders each template with complete resume data', async () => {
+    const { renderResumeHtml, resumeTemplates } = await import('./templates/index.js');
+
+    for (const template of resumeTemplates) {
+      const html = renderResumeHtml({
+        templateId: template.id,
+        content: completeContent,
+        user: {
+          full_name: 'Ada Lovelace',
+          email: 'ada@example.com',
+          phone_number: '+1 555 0100',
+          location: 'New York, NY',
+          github_url: 'https://github.com/ada',
+          linkedin_url: 'https://linkedin.com/in/ada',
+          portfolio_url: 'https://ada.dev',
+        },
+        jobTitle: 'Backend Engineer',
+        companyName: 'Acme',
+      });
+
+      expect(html).toContain(`template-${template.id}`);
+      expect(html).toContain('Ada Lovelace');
+      expect(html).toContain('TypeScript');
+      expect(html).toContain('Resume Builder');
+      expect(html).toContain('Research Papers');
+      expect(html).toContain('Efficient Edge-Cloud Sepsis Prediction');
+      expect(html).toContain('IEEE Health AI Conference');
+      expect(html).toContain('10.1109/example.2025.1');
+      expect(html).not.toContain('<table');
+    }
+  });
+
+  it('renders minimal data without empty separators or optional sections', async () => {
+    const { renderResumeHtml } = await import('./templates/index.js');
+    const html = renderResumeHtml({
+      templateId: 'classic-professional',
+      content: { summary: 'Early-career engineer.', skills: {} },
+      user: { full_name: 'Ada Lovelace', email: 'ada@example.com' },
+    });
+
+    expect(html).toContain('Early-career engineer.');
+    expect(html).not.toContain('Experience</h2>');
+    expect(html).not.toContain('contact-separator');
+    expect(html).not.toContain('<script');
+  });
+
+  it('escapes HTML content', async () => {
+    const { renderResumeHtml } = await import('./templates/index.js');
+    const html = renderResumeHtml({
+      templateId: 'technical-modern',
+      content: {
+        summary: '<script>alert("x")</script>',
+        projects: [{ name: '<b>Project</b>', bullets: ['Used <img src=x> safely.'] }],
+      },
+      user: { full_name: '<Ada>' },
+    });
+
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).toContain('&lt;Ada&gt;');
+    expect(html).not.toContain('<script>alert');
   });
 });
 
@@ -256,7 +409,7 @@ describe('orchestrator (mocked)', () => {
       jobTitle: 'Backend Engineer',
       companyName: 'Acme',
       jobDescription: 'Build services with TypeScript and Node.js',
-      templateId: 'modern',
+      templateId: 'technical-modern',
       pageLength: '1-page',
     });
 

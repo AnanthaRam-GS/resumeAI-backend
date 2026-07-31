@@ -35,6 +35,17 @@ vi.mock('../../src/services/nvidia-nim.service.js', () => ({
   }),
 }));
 
+vi.mock('../../src/services/nvidia-nim.service.js', () => ({
+  requestNimJson: async () => ({
+    summary: 'Built cool stuff',
+    experience: [],
+    projects: [],
+    skills: {},
+    education: [],
+    certifications: [],
+  }),
+}));
+
 vi.mock('../../src/services/pdf-renderer.service.js', () => ({
   renderHtmlToPdfBuffer: async () => Buffer.from('PDF'),
 }));
@@ -56,7 +67,14 @@ describe('resume orchestrator integration (mocked)', () => {
     // Simple mock for pool.query that returns objects for inserts/updates
     pool.query = vi.fn(async (text: string) => {
       if (text.includes('INSERT INTO job_targets')) {
-        return { rows: [{ id: 'job-target-id' }] };
+        return {
+          rows: [{
+            id: 'job-target-id',
+            job_title: 'Backend Engineer',
+            company_name: 'Acme',
+            job_description: 'Build backend services using Node and TypeScript',
+          }],
+        };
       }
 
       if (text.includes('INSERT INTO resume_generation_jobs')) {
@@ -96,7 +114,7 @@ describe('resume orchestrator integration (mocked)', () => {
       jobTitle: 'Backend Engineer',
       companyName: 'Acme',
       jobDescription: 'Build backend services using Node and TypeScript',
-      templateId: 'modern',
+      templateId: 'technical-modern',
       pageLength: '1-page',
     });
 

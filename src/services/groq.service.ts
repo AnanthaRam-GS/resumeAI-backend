@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk';
 import { env } from '../config/env.js';
 import { AppError, ValidationError } from '../utils/errors.js';
+import { withCircuitBreaker } from './circuit-breaker.service.js';
 
 export const GROQ_DEFAULT_MODEL = 'llama-3.1-8b-instant';
 
@@ -12,7 +13,13 @@ export interface GroqPromptOptions {
 	userPrompt: string;
 }
 
-export const groqClient = new Groq({ apiKey: env.GROQ_API_KEY });
+export const groqClient = env.GROQ_API_KEY ? new Groq({ apiKey: env.GROQ_API_KEY }) : null;
+
+const ensureGroqConfigured = (): void => {
+	if (!env.GROQ_API_KEY) {
+		throw new AppError('Groq API is not configured for this environment', 503, 'GROQ_NOT_CONFIGURED');
+	}
+};
 
 const getGroqContent = (response: unknown): string => {
 	const choices = (response as { choices?: Array<{ message?: { content?: string | null } }> }).choices;
@@ -21,9 +28,16 @@ const getGroqContent = (response: unknown): string => {
 };
 
 export const requestGroqText = async (options: GroqPromptOptions): Promise<string> => {
+	ensureGroqConfigured();
 	try {
-		const response = await groqClient.chat.completions.create({
-			model: options.model ?? GROQ_DEFAULT_MODEL,
+		if (!groqClient) {
+			throw new AppError('Groq client is not configured', 503, 'GROQ_NOT_CONFIGURED');
+		}
+		const modelId = options.model ?? GROQ_DEFAULT_MODEL;
+		const response = await withCircuitBreaker(
+			{ provider: 'groq', operation: 'chat_text', model: modelId },
+			() => groqClient.chat.completions.create({
+			model: modelId,
 			temperature: options.temperature ?? 0.2,
 			max_tokens: options.maxTokens ?? 800,
 			messages: [
@@ -32,7 +46,8 @@ export const requestGroqText = async (options: GroqPromptOptions): Promise<strin
 					: []),
 				{ role: 'user' as const, content: options.userPrompt },
 			],
-		});
+		}),
+		);
 
 		const content = getGroqContent(response);
 
@@ -53,9 +68,16 @@ export const requestGroqText = async (options: GroqPromptOptions): Promise<strin
 };
 
 export const requestGroqJson = async <T>(options: GroqPromptOptions): Promise<T> => {
+	ensureGroqConfigured();
 	try {
-		const response = await groqClient.chat.completions.create({
-			model: options.model ?? GROQ_DEFAULT_MODEL,
+		if (!groqClient) {
+			throw new AppError('Groq client is not configured', 503, 'GROQ_NOT_CONFIGURED');
+		}
+		const modelId = options.model ?? GROQ_DEFAULT_MODEL;
+		const response = await withCircuitBreaker(
+			{ provider: 'groq', operation: 'chat_json', model: modelId },
+			() => groqClient.chat.completions.create({
+			model: modelId,
 			temperature: options.temperature ?? 0.2,
 			max_tokens: options.maxTokens ?? 800,
 			messages: [
@@ -65,7 +87,8 @@ export const requestGroqJson = async <T>(options: GroqPromptOptions): Promise<T>
 				{ role: 'user' as const, content: options.userPrompt },
 			],
 			response_format: { type: 'json_object' },
-		});
+		}),
+		);
 
 		const content = getGroqContent(response);
 

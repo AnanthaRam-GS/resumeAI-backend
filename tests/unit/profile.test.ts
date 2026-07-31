@@ -292,7 +292,7 @@ describe('profile endpoints', () => {
 					authorization: `Bearer ${createToken()}`,
 				},
 				payload: {
-					onboarding_step: 7,
+					onboarding_step: 8,
 				},
 			});
 

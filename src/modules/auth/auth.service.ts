@@ -128,7 +128,7 @@ export const verifyPassword = async (
 	const matches = await bcrypt.compare(password, passwordHash);
 
 	if (!matches) {
-		throw new UnauthorizedError('Invalid email or password');
+		throw new UnauthorizedError('Incorrect password. Please try again.', 'INVALID_PASSWORD');
 	}
 };
 

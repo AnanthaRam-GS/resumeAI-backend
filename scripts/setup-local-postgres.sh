@@ -27,7 +27,7 @@ redact_database_url() {
 
 if ! command -v psql >/dev/null 2>&1; then
 	echo "psql is not installed or not available on PATH."
-	echo "Install PostgreSQL 15.x with Homebrew before running this script."
+	echo "Install PostgreSQL with pgvector before running this script."
 	exit 1
 fi
 
@@ -57,11 +57,13 @@ cat <<EOF
 Local PostgreSQL setup complete.
 
 Use these values in .env:
-DATABASE_URL=${DEV_DATABASE_URL}
+USE_SUPABASE=false
+LOCAL_DATABASE_URL=${DEV_DATABASE_URL}
 TEST_DATABASE_URL=${TEST_DATABASE_URL}
 
 Use this value in .env.test:
-DATABASE_URL=${TEST_DATABASE_URL}
+USE_SUPABASE=false
+LOCAL_DATABASE_URL=${TEST_DATABASE_URL}
 
 If your local PostgreSQL superuser requires credentials, rerun with:
 POSTGRES_SETUP_URL=postgresql://<admin-user>:<admin-password>@localhost:5432/postgres pnpm db:local:setup

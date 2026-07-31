@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { env } from '../../src/config/env.js';
-import { NotFoundError } from '../../src/utils/errors.js';
+import { ConflictError, NotFoundError } from '../../src/utils/errors.js';
 
 const createPortfolioItemMock = vi.fn();
 const listPortfolioItemsMock = vi.fn();
@@ -113,6 +113,122 @@ describe('portfolio endpoints', () => {
 				payload: {
 					type: 'project',
 					source: 'manual',
+				},
+			});
+
+			expect(response.statusCode).toBe(422);
+			expect(response.json()).toMatchObject({
+				success: false,
+				message: expect.stringContaining('Invalid body payload'),
+			});
+
+			await app.close();
+		});
+
+		it('returns 409 when a duplicate portfolio item is detected', async () => {
+			createPortfolioItemMock.mockRejectedValueOnce(
+				new ConflictError('This skill already exists in your portfolio.', 'DUPLICATE_PORTFOLIO_ITEM'),
+			);
+			const app = await loadApp();
+			await app.ready();
+
+			const response = await app.inject({
+				method: 'POST',
+				url: '/portfolio/items',
+				headers: {
+					authorization: `Bearer ${createToken()}`,
+				},
+				payload: {
+					type: 'skill',
+					source: 'manual',
+					title: 'TypeScript',
+					skill_name: 'TypeScript',
+				},
+			});
+
+			expect(response.statusCode).toBe(409);
+			expect(response.json()).toEqual({
+				success: false,
+				message: 'This skill already exists in your portfolio.',
+				code: 'DUPLICATE_PORTFOLIO_ITEM',
+			});
+
+			await app.close();
+		});
+
+		it('creates a research paper portfolio item with publication metadata', async () => {
+			const researchPaper = {
+				...item,
+				type: 'research_paper',
+				title: 'Efficient Edge-Cloud Sepsis Prediction',
+				description: 'Preserved abstract text.',
+				project_url: 'https://ieeexplore.ieee.org/document/1',
+				domain_category: 'conference',
+				extra: {
+					authors: ['Ada Lovelace', 'Grace Hopper'],
+					venue: 'IEEE Health AI Conference',
+					year: '2025',
+					doi: '10.1109/example.2025.1',
+					arxivUrl: 'https://arxiv.org/abs/2501.12345',
+					publicationUrl: 'https://ieeexplore.ieee.org/document/1',
+					githubUrl: 'https://github.com/example/paper-code',
+					status: 'published',
+				},
+			};
+			const payload = {
+				type: 'research_paper',
+				source: 'manual',
+				title: 'Efficient Edge-Cloud Sepsis Prediction',
+				description: 'Preserved abstract text.',
+				project_url: 'https://ieeexplore.ieee.org/document/1',
+				domain_category: 'conference',
+				extra: researchPaper.extra,
+			};
+			createPortfolioItemMock.mockResolvedValueOnce(researchPaper);
+			const app = await loadApp();
+			await app.ready();
+
+			const response = await app.inject({
+				method: 'POST',
+				url: '/portfolio/items',
+				headers: {
+					authorization: `Bearer ${createToken()}`,
+				},
+				payload,
+			});
+
+			expect(response.statusCode).toBe(201);
+			expect(response.json()).toMatchObject({
+				success: true,
+				data: {
+					type: 'research_paper',
+					title: 'Efficient Edge-Cloud Sepsis Prediction',
+				},
+			});
+			expect(createPortfolioItemMock).toHaveBeenCalledWith('user-123', payload);
+
+			await app.close();
+		});
+
+		it('rejects invalid research paper URLs and DOI values', async () => {
+			const app = await loadApp();
+			await app.ready();
+
+			const response = await app.inject({
+				method: 'POST',
+				url: '/portfolio/items',
+				headers: {
+					authorization: `Bearer ${createToken()}`,
+				},
+				payload: {
+					type: 'research_paper',
+					source: 'manual',
+					title: 'Broken Paper',
+					extra: {
+						doi: 'not-a-doi',
+						arxivUrl: 'https://example.com/not-arxiv',
+						year: '3025',
+					},
 				},
 			});
 

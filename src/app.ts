@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
+import rawBody from 'fastify-raw-body';
 import { env } from './config/env.js';
 import { authRoutes } from './modules/auth/index.js';
 import { portfolioRoutes } from './modules/portfolio/index.js';
@@ -11,8 +12,16 @@ import { resumeRoutes } from './modules/resume/resume.routes.js';
 import { coverLetterRoutes } from './modules/cover-letter/cover-letter.routes.js';
 import { analyticsRoutes } from './modules/analytics/analytics.routes.js';
 import { documentsRoutes } from './modules/documents/documents.routes.js';
+import { resumeImportRoutes } from './modules/resume-import/resume-import.routes.js';
+import { githubRoutes } from './modules/github/github.routes.js';
+import { jobTargetRoutes } from './modules/job-targets/index.js';
+import { linkedInImportRoutes } from './modules/linkedin-import/index.js';
+import { applicationRoutes } from './modules/applications/index.js';
 import { AppError } from './utils/errors.js';
 import { error as errorResponse } from './utils/response.js';
+import { registerWebSocket } from './services/websocket.service.js';
+import { getCorsConfig } from './utils/cors.js';
+import { pool } from './db/client.js';
 
 const buildLoggerOptions = () => {
 	if (env.NODE_ENV === 'test') {
@@ -35,12 +44,50 @@ const buildLoggerOptions = () => {
 	} as const;
 };
 
+const isDatabaseConnectionError = (error: unknown) => {
+	if (typeof error !== 'object' || error === null) {
+		return false;
+	}
+
+	const code =
+		'code' in error && typeof error.code === 'string' ? error.code : undefined;
+	const message =
+		'message' in error && typeof error.message === 'string' ? error.message : '';
+
+	return (
+		code === 'ENOTFOUND' ||
+		code === 'ECONNREFUSED' ||
+		code === 'ETIMEDOUT' ||
+		code === 'ECONNRESET' ||
+		code === 'XX000' && message.includes('tenant/user') ||
+		message.includes('getaddrinfo ENOTFOUND')
+	);
+};
+
 const registerRoutes = (app: FastifyInstance) => {
 	app.get('/health', async () => {
 		return {
 			success: true,
 			message: 'ResumeAI Backend is running',
 		};
+	});
+
+	app.get('/health/db', async (_request, reply) => {
+		try {
+			await pool.query('SELECT 1');
+			return { success: true, status: 'ok' };
+		} catch {
+			return reply.code(503).send({ success: false, status: 'unavailable' });
+		}
+	});
+
+	app.get('/health/ready', async (_request, reply) => {
+		try {
+			await pool.query('SELECT 1');
+			return { success: true, status: 'ready' };
+		} catch {
+			return reply.code(503).send({ success: false, status: 'not_ready' });
+		}
 	});
 
 	app.register(authRoutes, { prefix: '/auth' });
@@ -51,21 +98,29 @@ const registerRoutes = (app: FastifyInstance) => {
 	app.register(coverLetterRoutes, { prefix: '/resume' });
 	app.register(analyticsRoutes, { prefix: '/analytics' });
 	app.register(documentsRoutes, { prefix: '/portfolio' });
+	app.register(resumeImportRoutes, { prefix: '/resume-import' });
+	app.register(githubRoutes, { prefix: '/github' });
+	app.register(jobTargetRoutes, { prefix: '/job-targets' });
+	app.register(linkedInImportRoutes, { prefix: '/linkedin-import' });
+	app.register(applicationRoutes, { prefix: '/applications' });
 };
 
 export const buildApp = (): FastifyInstance => {
 	const app = Fastify({ logger: buildLoggerOptions() });
 
-	app.register(cors, {
-		origin: true,
-		methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-		allowedHeaders: ['Authorization', 'Content-Type'],
-	});
+	app.register(cors, getCorsConfig());
 	app.register(helmet);
 	app.register(rateLimit, {
 		max: 100,
 		timeWindow: 60000,
 	});
+	app.register(rawBody, {
+		field: 'rawBody',
+		global: false,
+		encoding: false,
+		runFirst: true,
+	});
+	registerWebSocket(app);
 
 	registerRoutes(app);
 
@@ -78,9 +133,19 @@ export const buildApp = (): FastifyInstance => {
 	});
 
 	app.setErrorHandler((error, request, reply) => {
-		request.log.error({ err: error }, 'Unhandled error');
 		if (error instanceof AppError) {
-			reply.status(error.statusCode).send(errorResponse(error.message));
+			if (error.statusCode >= 500) {
+				request.log.error({ err: error }, 'Unhandled application error');
+			}
+			reply.status(error.statusCode).send(errorResponse(error.message, error.code));
+			return;
+		}
+
+		if (isDatabaseConnectionError(error)) {
+			request.log.error({ err: error }, 'Database connection unavailable');
+			reply
+				.status(503)
+				.send(errorResponse('Database unavailable. Check Supabase configuration.', 'DATABASE_UNAVAILABLE'));
 			return;
 		}
 
@@ -95,11 +160,15 @@ export const buildApp = (): FastifyInstance => {
 		const message = error instanceof Error ? error.message : 'Request failed';
 
 		if (statusCode && statusCode >= 400) {
+			if (statusCode >= 500) {
+				request.log.error({ err: error }, 'Unhandled server error');
+			}
 			reply.status(statusCode).send(errorResponse(message));
 			return;
 		}
 
-		reply.status(500).send(errorResponse('Internal server error'));
+		request.log.error({ err: error }, 'Unhandled error');
+		reply.status(500).send(errorResponse('Internal server error', 'SERVER_ERROR'));
 	});
 
 	return app;

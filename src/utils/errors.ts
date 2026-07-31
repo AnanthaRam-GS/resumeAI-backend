@@ -1,10 +1,12 @@
 export class AppError extends Error {
 	readonly statusCode: number;
+	readonly code?: string;
 
-	constructor(message: string, statusCode: number) {
+	constructor(message: string, statusCode: number, code?: string) {
 		super(message);
 		this.name = new.target.name;
 		this.statusCode = statusCode;
+		this.code = code;
 		Object.setPrototypeOf(this, new.target.prototype);
 	}
 }
@@ -16,8 +18,8 @@ export class ValidationError extends AppError {
 }
 
 export class UnauthorizedError extends AppError {
-	constructor(message = 'Unauthorized') {
-		super(message, 401);
+	constructor(message = 'Unauthorized', code?: string) {
+		super(message, 401, code);
 	}
 }
 
@@ -34,7 +36,7 @@ export class NotFoundError extends AppError {
 }
 
 export class ConflictError extends AppError {
-	constructor(message = 'Conflict') {
-		super(message, 409);
+	constructor(message = 'Conflict', code?: string) {
+		super(message, 409, code);
 	}
 }

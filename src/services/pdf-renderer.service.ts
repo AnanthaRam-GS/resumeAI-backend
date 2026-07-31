@@ -31,6 +31,9 @@ export const renderHtmlToPdfBuffer = async (
 	try {
 		const page = await browser.newPage();
 		await page.setContent(html, { waitUntil: 'load' });
+		if ('evaluateHandle' in page && typeof page.evaluateHandle === 'function') {
+			await page.evaluateHandle('document.fonts.ready');
+		}
 
 		const pdf = await page.pdf({
 			format: options.format ?? 'A4',

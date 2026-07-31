@@ -6,6 +6,7 @@ export interface SelectionCaps {
 	education?: number;
 	skill?: number;
 	certification?: number;
+	research_paper?: number;
 }
 
 const DEFAULT_CAPS: Required<SelectionCaps> = {
@@ -14,6 +15,7 @@ const DEFAULT_CAPS: Required<SelectionCaps> = {
 	education: 2,
 	skill: 6,
 	certification: 3,
+	research_paper: 2,
 };
 
 const typeKeyMap: Record<PortfolioItemType, keyof Required<SelectionCaps>> = {
@@ -22,6 +24,7 @@ const typeKeyMap: Record<PortfolioItemType, keyof Required<SelectionCaps>> = {
 	education: 'education',
 	skill: 'skill',
 	certification: 'certification',
+	research_paper: 'research_paper',
 };
 
 export const selectPortfolioItems = (
@@ -38,6 +41,7 @@ export const selectPortfolioItems = (
 		education: 0,
 		skill: 0,
 		certification: 0,
+		research_paper: 0,
 	};
 
 	const selected: SelectedItem[] = [];

@@ -3,6 +3,16 @@ import { ForbiddenError, NotFoundError } from '../../utils/errors.js';
 import { getSignedUrl, deleteFile, uploadFile } from '../../services/storage.service.js';
 import { renderHtmlToPdfBuffer } from '../../services/pdf-renderer.service.js';
 import { generateVersionLabel } from '../../utils/version-label.js';
+import {
+  ACADEMIC_SERIF_BASE_CSS,
+  ACADEMIC_SERIF_PDF_MARGIN,
+  injectAcademicSerifFonts,
+} from './academic-serif-template.js';
+import {
+  normalizeResumeTemplateId,
+  renderResumeHtml,
+  RESUME_PDF_MARGIN,
+} from './templates/index.js';
 import type {
   ResumeVersionRow,
   GenerationJobRow,
@@ -36,50 +46,91 @@ const renderList = (items: unknown): string => {
   return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
 };
 
-const buildExportHtml = (args: {
-  content: Record<string, unknown>;
-  fullName: string;
-  email: string;
-  jobTitle?: string | null;
-  companyName?: string | null;
-}): string => {
-  const { content } = args;
-  const experience = Array.isArray(content.experience) ? content.experience as Array<Record<string, unknown>> : [];
-  const projects = Array.isArray(content.projects) ? content.projects as Array<Record<string, unknown>> : [];
-  const education = Array.isArray(content.education) ? content.education as Array<Record<string, unknown>> : [];
-  const certifications = Array.isArray(content.certifications) ? content.certifications as Array<Record<string, unknown>> : [];
-  const skills = content.skills && typeof content.skills === 'object' && !Array.isArray(content.skills)
-    ? content.skills as Record<string, unknown>
-    : {};
+const ensureUrl = (value: string): string =>
+	/^https?:\/\//i.test(value) ? value : `https://${value}`;
 
-  return `<!doctype html>
+const extractGithubUsername = (url: string): string => {
+	const m = url.match(/github\.com\/([^/?#\s]+)/i);
+	return m ? m[1]! : url.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+};
+
+const extractLinkedinUsername = (url: string): string => {
+	const m = url.match(/linkedin\.com\/in\/([^/?#\s]+)/i);
+	return m ? m[1]! : url.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+};
+
+const stripProtocol = (url: string): string =>
+	url.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+
+interface ExportUser {
+	full_name: string;
+	email: string;
+	phone_number?: string | null;
+	location?: string | null;
+	github_url?: string | null;
+	linkedin_url?: string | null;
+	portfolio_url?: string | null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const buildExportHtml = (args: {
+	content: Record<string, unknown>;
+	user: ExportUser;
+}): string => {
+	const { content, user } = args;
+	const experience = Array.isArray(content.experience) ? content.experience as Array<Record<string, unknown>> : [];
+	const projects = Array.isArray(content.projects) ? content.projects as Array<Record<string, unknown>> : [];
+	const education = Array.isArray(content.education) ? content.education as Array<Record<string, unknown>> : [];
+	const certifications = Array.isArray(content.certifications) ? content.certifications as Array<Record<string, unknown>> : [];
+	const skills = content.skills && typeof content.skills === 'object' && !Array.isArray(content.skills)
+		? content.skills as Record<string, unknown>
+		: {};
+
+	// Build contact row items
+	const contactItems: string[] = [
+		`<a class="contact-item" href="mailto:${escapeHtml(user.email)}">${escapeHtml(user.email)}</a>`,
+	];
+	if (user.phone_number) {
+		contactItems.push(`<a class="contact-item" href="tel:${escapeHtml(user.phone_number.replace(/\s+/g, ''))}">${escapeHtml(user.phone_number)}</a>`);
+	}
+	if (user.location) {
+		contactItems.push(`<span class="contact-item">${escapeHtml(user.location)}</span>`);
+	}
+
+	const socialItems: string[] = [];
+	if (user.github_url) {
+		socialItems.push(`<a class="contact-item" href="${escapeHtml(ensureUrl(user.github_url))}">${escapeHtml(extractGithubUsername(user.github_url))}</a>`);
+	}
+	if (user.linkedin_url) {
+		socialItems.push(`<a class="contact-item" href="${escapeHtml(ensureUrl(user.linkedin_url))}">${escapeHtml(extractLinkedinUsername(user.linkedin_url))}</a>`);
+	}
+	if (user.portfolio_url) {
+		socialItems.push(`<a class="contact-item" href="${escapeHtml(ensureUrl(user.portfolio_url))}">${escapeHtml(stripProtocol(user.portfolio_url))}</a>`);
+	}
+
+	const contactSep = '<span class="contact-sep"> | </span>';
+
+	return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family: Arial, sans-serif; font-size: 10.5pt; color: #1a1a1a; line-height: 1.45; padding: 16mm 14mm; }
-    header { border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 14px; }
-    h1 { font-family: Georgia, serif; font-size: 21pt; margin: 0; }
-    h2 { font-size: 9.5pt; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin: 13px 0 7px; }
-    .meta { color: #555; margin-top: 3px; }
-    .entry { margin-bottom: 9px; }
-    .entry-head { display: flex; justify-content: space-between; gap: 16px; font-weight: 700; }
-    .muted { color: #666; font-style: italic; font-weight: 400; }
-    ul { margin: 4px 0 0; padding-left: 16px; }
-    li { margin-bottom: 2px; }
+    ${ACADEMIC_SERIF_BASE_CSS}
+    .entry-head { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 14pt; font-weight: 700; }
   </style>
 </head>
 <body>
   <header>
-    <h1>${escapeHtml(args.fullName)}</h1>
-    <div class="meta">${escapeHtml(args.email)}${args.jobTitle ? ` · Tailored for ${escapeHtml(args.jobTitle)}${args.companyName ? ` at ${escapeHtml(args.companyName)}` : ''}` : ''}</div>
+    <h1>${escapeHtml(user.full_name)}</h1>
+    <div class="contact-row">${contactItems.join(contactSep)}</div>
+    ${socialItems.length ? `<div class="contact-row" style="margin-top:3pt">${socialItems.join(contactSep)}</div>` : ''}
   </header>
-  ${content.summary ? `<section><h2>Summary</h2><p>${escapeHtml(content.summary)}</p></section>` : ''}
-  ${experience.length ? `<section><h2>Experience</h2>${experience.map((item) => `<div class="entry"><div class="entry-head"><span>${escapeHtml(item.role)}${item.company ? ` · ${escapeHtml(item.company)}` : ''}</span><span class="muted">${escapeHtml(item.period)}</span></div>${renderList(item.bullets)}</div>`).join('')}</section>` : ''}
-  ${projects.length ? `<section><h2>Projects</h2>${projects.map((item) => `<div class="entry"><div class="entry-head"><span>${escapeHtml(item.name)}</span><span class="muted">${Array.isArray(item.tech_stack) ? (item.tech_stack as unknown[]).map(escapeHtml).join(' · ') : ''}</span></div>${item.description ? `<p>${escapeHtml(item.description)}</p>` : ''}${renderList(item.bullets)}</div>`).join('')}</section>` : ''}
-  ${Object.keys(skills).length ? `<section><h2>Skills</h2>${Object.entries(skills).map(([key, value]) => `<p><strong>${escapeHtml(key)}:</strong> ${Array.isArray(value) ? value.map(escapeHtml).join(', ') : escapeHtml(value)}</p>`).join('')}</section>` : ''}
-  ${education.length ? `<section><h2>Education</h2>${education.map((item) => `<div class="entry"><div class="entry-head"><span>${escapeHtml(item.degree)}</span><span class="muted">${escapeHtml(item.period)}</span></div><div>${escapeHtml(item.institution)}${item.gpa ? ` · GPA: ${escapeHtml(item.gpa)}` : ''}</div></div>`).join('')}</section>` : ''}
-  ${certifications.length ? `<section><h2>Certifications</h2>${certifications.map((item) => `<p><strong>${escapeHtml(item.name)}</strong>${item.issuer ? ` · ${escapeHtml(item.issuer)}` : ''}${item.date ? ` (${escapeHtml(item.date)})` : ''}</p>`).join('')}</section>` : ''}
+  ${content.summary ? `<section><h2>Summary</h2><p class="summary">${escapeHtml(content.summary)}</p></section>` : ''}
+  ${experience.length ? `<section><h2>Experience</h2>${experience.map((item) => `<div class="entry"><div class="entry-head"><span class="entry-title">${escapeHtml(item.role)}${item.company ? `<span class="entry-org" style="display:block;font-weight:400">${escapeHtml(item.company)}</span>` : ''}</span><span class="entry-period">${escapeHtml(item.period)}</span></div>${renderList(item.bullets)}</div>`).join('')}</section>` : ''}
+  ${projects.length ? `<section><h2>Projects</h2>${projects.map((item) => { const href = (item.project_url || item.live_url || item.repository_url || item.url || item.link) as string | undefined; const tech = Array.isArray(item.tech_stack) ? (item.tech_stack as unknown[]).map(escapeHtml).join(' · ') : ''; return `<div class="entry"><div class="entry-head"><span class="entry-title">${escapeHtml(item.name)}${href ? ` <a href="${escapeHtml(ensureUrl(href))}" style="font-weight:400;font-size:10pt">↗</a>` : ''}</span><span class="entry-tech">${tech}</span></div>${item.description ? `<p class="entry-desc">${escapeHtml(item.description)}</p>` : ''}${renderList(item.bullets)}</div>`; }).join('')}</section>` : ''}
+  ${Object.keys(skills).length ? `<section><h2>Skills</h2><table>${Object.entries(skills).map(([key, value]) => `<tr><td class="skill-cat">${escapeHtml(key)}</td><td>${Array.isArray(value) ? value.map(escapeHtml).join(', ') : escapeHtml(value)}</td></tr>`).join('')}</table></section>` : ''}
+  ${education.length ? `<section><h2>Education</h2>${education.map((item) => `<div class="entry education-entry"><span class="muted">${escapeHtml(item.period)}</span><div><strong>${escapeHtml(item.degree)}</strong><div>${escapeHtml(item.institution)}</div></div>${item.gpa ? `<span class="muted">${escapeHtml(item.gpa)}</span>` : ''}</div>`).join('')}</section>` : ''}
+  ${certifications.length ? `<section><h2>Certifications</h2>${certifications.map((item) => `<p class="cert-entry"><strong>${escapeHtml(item.name)}</strong>${item.issuer ? ` — ${escapeHtml(item.issuer)}` : ''}${item.date ? ` (${escapeHtml(item.date)})` : ''}</p>`).join('')}</section>` : ''}
 </body>
 </html>`;
 };
@@ -272,7 +323,7 @@ export const updateResumeContent = async (
 ): Promise<ResumeVersionRow> => {
   const result = await pool.query<ResumeVersionRow>(
     `UPDATE resume_versions
-     SET generated_content = $1, updated_at = NOW()
+     SET generated_content = $1, pdf_s3_key = NULL, updated_at = NOW()
      WHERE id = $2 AND user_id = $3
      RETURNING ${resumeVersionColumns}`,
     [JSON.stringify(generatedContent), versionId, userId],
@@ -292,21 +343,29 @@ export const exportResumeVersionPdf = async (
     return { url: await getSignedUrl(version.pdf_s3_key) };
   }
 
-  const userResult = await pool.query<{ full_name: string; email: string }>(
-    `SELECT full_name, email FROM users WHERE id = $1`,
+  const userResult = await pool.query<{
+    full_name: string; email: string;
+    phone_number: string | null; location: string | null;
+    github_url: string | null; linkedin_url: string | null; portfolio_url: string | null;
+  }>(
+    `SELECT full_name, email, phone_number, location, github_url, linkedin_url, portfolio_url FROM users WHERE id = $1`,
     [userId],
   );
   const user = userResult.rows[0];
   if (!user) throw new NotFoundError('User not found');
 
-  const html = buildExportHtml({
+  const html = renderResumeHtml({
     content: version.generated_content,
-    fullName: user.full_name,
-    email: user.email,
+    user,
     jobTitle: version.job_title,
     companyName: version.company_name,
+    templateId: normalizeResumeTemplateId(version.template_id),
   });
-  const pdfBuffer = await renderHtmlToPdfBuffer(html, { format: 'A4', printBackground: true });
+  const pdfBuffer = await renderHtmlToPdfBuffer(html, {
+    format: 'A4',
+    printBackground: true,
+    margin: RESUME_PDF_MARGIN,
+  });
   const key = `users/${userId}/resumes/export-${versionId}.pdf`;
   await uploadFile(key, pdfBuffer, 'application/pdf');
   await pool.query(
@@ -345,7 +404,11 @@ export const renderAndStorePdf = async (
   );
   if (!exists.rows[0]) throw new NotFoundError('Resume version not found');
 
-  const pdfBuffer = await renderHtmlToPdfBuffer(html, { format: 'A4', printBackground: true });
+  const pdfBuffer = await renderHtmlToPdfBuffer(injectAcademicSerifFonts(html), {
+    format: 'A4',
+    printBackground: true,
+    margin: ACADEMIC_SERIF_PDF_MARGIN,
+  });
   const key = `users/${userId}/resumes/editor-${versionId}.pdf`;
   await uploadFile(key, pdfBuffer, 'application/pdf');
 

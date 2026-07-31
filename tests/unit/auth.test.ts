@@ -215,7 +215,8 @@ describe('auth endpoints', () => {
 			expect(response.statusCode).toBe(401);
 			expect(response.json()).toEqual({
 				success: false,
-				message: 'Invalid email or password',
+				message: 'User not found. Please create an account.',
+				code: 'USER_NOT_FOUND',
 			});
 
 			await app.close();
@@ -224,7 +225,7 @@ describe('auth endpoints', () => {
 		it('returns 401 for a wrong password', async () => {
 			findUserByEmailMock.mockResolvedValueOnce(mockUserRow);
 			verifyPasswordMock.mockRejectedValueOnce(
-				new UnauthorizedError('Invalid email or password'),
+				new UnauthorizedError('Incorrect password. Please try again.', 'INVALID_PASSWORD'),
 			);
 			const app = await loadApp();
 			await app.ready();
@@ -241,7 +242,8 @@ describe('auth endpoints', () => {
 			expect(response.statusCode).toBe(401);
 			expect(response.json()).toEqual({
 				success: false,
-				message: 'Invalid email or password',
+				message: 'Incorrect password. Please try again.',
+				code: 'INVALID_PASSWORD',
 			});
 
 			await app.close();
