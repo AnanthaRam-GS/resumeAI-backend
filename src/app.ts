@@ -17,6 +17,7 @@ import { githubRoutes } from './modules/github/github.routes.js';
 import { jobTargetRoutes } from './modules/job-targets/index.js';
 import { linkedInImportRoutes } from './modules/linkedin-import/index.js';
 import { applicationRoutes } from './modules/applications/index.js';
+import { profileExtractionRoutes } from './modules/profile-extraction/profile-extraction.routes.js';
 import { AppError } from './utils/errors.js';
 import { error as errorResponse } from './utils/response.js';
 import { registerWebSocket } from './services/websocket.service.js';
@@ -92,6 +93,7 @@ const registerRoutes = (app: FastifyInstance) => {
 
 	app.register(authRoutes, { prefix: '/auth' });
 	app.register(profileRoutes, { prefix: '/profile' });
+	app.register(profileExtractionRoutes, { prefix: '/profile' });
 	app.register(portfolioRoutes, { prefix: '/portfolio' });
 	app.register(settingsRoutes, { prefix: '/settings' });
 	app.register(resumeRoutes, { prefix: '/resume' });
