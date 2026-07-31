@@ -1,5 +1,11 @@
 [phases.setup]
-nixPkgs = ["nodejs_24"]
+nixPkgs = ["nodejs_24", "pnpm"]
 
 [phases.install]
-cmds = ["npm install -g pnpm@11.8.0", "pnpm i --frozen-lockfile"]
+cmds = ["pnpm install --frozen-lockfile"]
+
+[phases.build]
+cmds = ["pnpm build"]
+
+[phases.start]
+cmd = "pnpm db:migrate:prod && pnpm start"
