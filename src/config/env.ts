@@ -57,6 +57,7 @@ const envSchema = z
     DATABASE_SSL_REJECT_UNAUTHORIZED: optionalBooleanString,
     JWT_SECRET: z.string().trim().min(32, 'JWT_SECRET must be at least 32 characters long'),
     JWT_EXPIRES_IN: z.string().trim().min(1).default('7d'),
+    API_KEY: optionalTrimmedString(),
     AWS_ACCESS_KEY_ID: z.string().trim().default(''),
     AWS_SECRET_ACCESS_KEY: z.string().trim().default(''),
     AWS_REGION: z.string().trim().default('us-east-1'),
@@ -76,12 +77,7 @@ const envSchema = z
       .min(1000)
       .max(360000)
       .default(60000),
-    NVIDIA_NIM_PARSER_TIMEOUT_MS: z.coerce
-      .number()
-      .int()
-      .min(1000)
-      .max(360000)
-      .default(120000),
+    NVIDIA_NIM_PARSER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(360000).default(120000),
     NVIDIA_NIM_RESEARCH_REPAIR_TIMEOUT_MS: z.coerce
       .number()
       .int()
@@ -89,11 +85,7 @@ const envSchema = z
       .max(360000)
       .default(240000),
     RESUME_PARSER_MODE: optionalTrimmedString(),
-    RESUME_PARSER_CONFIDENCE_THRESHOLD: z.coerce
-      .number()
-      .min(0)
-      .max(1)
-      .default(0.75),
+    RESUME_PARSER_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.75),
     NVIDIA_NIM_EMBEDDING_MODEL: optionalTrimmedString(),
     NVIDIA_NIM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(360000).default(30000),
     NVIDIA_NIM_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
@@ -143,6 +135,7 @@ const envSchema = z
     );
     requireProductionSecret('AWS_S3_BUCKET', 'AWS_S3_BUCKET is required in production');
     requireProductionSecret('GEMINI_API_KEY', 'GEMINI_API_KEY is required in production');
+    requireProductionSecret('API_KEY', 'API_KEY is required in production');
     if (
       value.NODE_ENV === 'production' &&
       value.NVIDIA_API_KEY === '' &&
