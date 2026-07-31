@@ -26,13 +26,23 @@ export const updateCareerGoalSchema = z.object({
 	career_goal: z.string().trim().min(10, 'Career goal must be at least 10 characters'),
 });
 
-export const updateOnboardingStepSchema = z.object({
-	onboarding_step: z
-		.int('Onboarding step must be an integer')
-		.min(1, 'Onboarding step must be between 1 and 8')
-		.max(8, 'Onboarding step must be between 1 and 8'),
-	onboarding_complete: z.boolean().optional(),
-});
+export const updateOnboardingStepSchema = z
+	.object({
+		onboarding_step: z
+			.int('Onboarding step must be an integer')
+			.min(1, 'Onboarding step must be between 1 and 7')
+			.max(8, 'Onboarding step must be between 1 and 8'),
+		onboarding_complete: z.boolean().optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.onboarding_step === 8 && data.onboarding_complete !== true) {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['onboarding_step'],
+				message: 'Onboarding step 8 is only valid when onboarding is complete',
+			});
+		}
+	});
 
 export type UpdatePersonalProfileInput = z.infer<typeof updatePersonalProfileSchema>;
 export type UpdateCareerGoalInput = z.infer<typeof updateCareerGoalSchema>;
