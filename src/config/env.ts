@@ -64,6 +64,7 @@ const envSchema = z
     AWS_S3_BUCKET: z.string().trim().default(''),
     GROQ_API_KEY: optionalTrimmedString(),
     GEMINI_API_KEY: z.string().trim().default(''),
+    OPENROUTER_API_KEY: z.string().trim().default(''),
     NVIDIA_API_KEY: z.string().trim().default(''),
     NVIDIA_NIM_API_KEY: z.string().trim().default(''),
     NVIDIA_NIM_BASE_URL: z.string().trim().url().default('https://integrate.api.nvidia.com/v1'),

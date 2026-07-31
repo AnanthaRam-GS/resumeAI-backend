@@ -1,9 +1,10 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { env } from '../config/env.js';
 import { AppError, ValidationError } from '../utils/errors.js';
 import { withCircuitBreaker } from './circuit-breaker.service.js';
 
-export const GEMINI_DEFAULT_MODEL = 'gemini-2.0-flash';
+export const GEMINI_DEFAULT_MODEL = 'google/gemini-2.5-flash';
+
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export interface GeminiPromptOptions {
   model?: string;
@@ -13,10 +14,8 @@ export interface GeminiPromptOptions {
   userPrompt: string;
 }
 
-export const geminiClient = env.GEMINI_API_KEY ? new GoogleGenerativeAI(env.GEMINI_API_KEY) : null;
-
 const ensureGeminiConfigured = (): void => {
-  if (!env.GEMINI_API_KEY) {
+  if (!env.OPENROUTER_API_KEY) {
     throw new AppError(
       'Gemini API is not configured for this environment',
       503,
@@ -25,34 +24,57 @@ const ensureGeminiConfigured = (): void => {
   }
 };
 
+interface OpenRouterChatResponse {
+  choices?: Array<{ message?: { content?: string } }>;
+  error?: { message?: string };
+}
+
+const callOpenRouter = async (
+  options: GeminiPromptOptions,
+  modelId: string,
+  responseFormat?: { type: 'json_object' },
+): Promise<string> => {
+  const messages = [
+    ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
+    { role: 'user', content: options.userPrompt },
+  ];
+
+  const response = await fetch(OPENROUTER_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: modelId,
+      messages,
+      temperature: options.temperature ?? 0.2,
+      max_tokens: options.maxOutputTokens ?? 1024,
+      ...(responseFormat ? { response_format: responseFormat } : {}),
+    }),
+  });
+
+  const data = (await response.json()) as OpenRouterChatResponse;
+
+  if (!response.ok) {
+    throw new Error(data.error?.message ?? `OpenRouter request failed with status ${response.status}`);
+  }
+
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) {
+    throw new ValidationError('Gemini returned an empty response');
+  }
+
+  return text;
+};
+
 export const requestGeminiText = async (options: GeminiPromptOptions): Promise<string> => {
   ensureGeminiConfigured();
   try {
-    if (!geminiClient) {
-      throw new AppError('Gemini client is not configured', 503, 'GEMINI_NOT_CONFIGURED');
-    }
     const modelId = options.model ?? GEMINI_DEFAULT_MODEL;
     return await withCircuitBreaker(
       { provider: 'gemini', operation: 'chat_text', model: modelId },
-      async () => {
-        const model = geminiClient.getGenerativeModel({
-          model: modelId,
-          systemInstruction: options.systemPrompt,
-          generationConfig: {
-            temperature: options.temperature ?? 0.2,
-            maxOutputTokens: options.maxOutputTokens ?? 1024,
-          },
-        });
-
-        const result = await model.generateContent(options.userPrompt);
-        const text = result.response.text().trim();
-
-        if (!text) {
-          throw new ValidationError('Gemini returned an empty response');
-        }
-
-        return text;
-      },
+      () => callOpenRouter(options, modelId),
     );
   } catch (error) {
     if (error instanceof AppError) {
@@ -75,30 +97,11 @@ const stripMarkdownFences = (raw: string): string => {
 export const requestGeminiJson = async <T>(options: GeminiPromptOptions): Promise<T> => {
   ensureGeminiConfigured();
   try {
-    if (!geminiClient) {
-      throw new AppError('Gemini client is not configured', 503, 'GEMINI_NOT_CONFIGURED');
-    }
     const modelId = options.model ?? GEMINI_DEFAULT_MODEL;
     return await withCircuitBreaker(
       { provider: 'gemini', operation: 'chat_json', model: modelId },
       async () => {
-        const model = geminiClient.getGenerativeModel({
-          model: modelId,
-          systemInstruction: options.systemPrompt,
-          generationConfig: {
-            temperature: options.temperature ?? 0.2,
-            maxOutputTokens: options.maxOutputTokens ?? 1024,
-            responseMimeType: 'application/json',
-          },
-        });
-
-        const result = await model.generateContent(options.userPrompt);
-        const raw = result.response.text().trim();
-
-        if (!raw) {
-          throw new ValidationError('Gemini returned an empty response');
-        }
-
+        const raw = await callOpenRouter(options, modelId, { type: 'json_object' });
         const cleaned = stripMarkdownFences(raw);
         try {
           return JSON.parse(cleaned) as T;
