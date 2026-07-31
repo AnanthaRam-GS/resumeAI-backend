@@ -1,3 +1,4 @@
+import type { FastifyRequest } from 'fastify';
 import { env } from '../config/env.js';
 
 export const parseAllowedOrigins = (rawOrigins: string | undefined): string[] => {
@@ -20,8 +21,12 @@ export const getCorsConfig = () => {
     allowedOrigins.push(env.FRONTEND_URL);
   }
 
+  const origins: (string | RegExp)[] = allowedOrigins.map((o) => o.replace(/\/+$/, ''));
+  // Automatically allow any Vercel domain deployment
+  origins.push(/\.vercel\.app$/i);
+
   return {
-    origin: allowedOrigins,
+    origin: origins,
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type', 'x-api-key'],
     credentials: true,
