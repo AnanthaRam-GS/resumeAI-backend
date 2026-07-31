@@ -190,7 +190,7 @@ describe('API key middleware', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/service-protected',
-      headers: { 'x-api-key': env.API_KEY },
+      headers: { 'x-api-key': env.API_KEY ?? 'test-service-api-key' },
     });
 
     expect(response.statusCode).toBe(200);

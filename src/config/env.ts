@@ -106,7 +106,14 @@ const envSchema = z
         'TOKEN_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)',
       )
       .default('0000000000000000000000000000000000000000000000000000000000000000'),
-    REDIS_URL: z.string().trim().default('redis://localhost:6379'),
+    REDIS_URL: z
+      .string()
+      .trim()
+      .default(
+        process.env.REDIS_PRIVATE_URL ??
+          process.env.REDISURL ??
+          'redis://localhost:6379',
+      ),
     FRONTEND_URL: optionalTrimmedString(z.string().trim().url('FRONTEND_URL must be a valid URL')),
     WORKERS_ENABLED: optionalBooleanString.default(false),
     USAGE_LIMITS_ENABLED: optionalBooleanString,
@@ -195,14 +202,6 @@ const envSchema = z
         path: ['DIRECT_URL'],
         message:
           'DIRECT_URL is required for migrations when SUPABASE_DATABASE_URL or DATABASE_URL uses the Supabase pooler',
-      });
-    }
-
-    if (value.NODE_ENV === 'production' && !useSupabase) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['USE_SUPABASE'],
-        message: 'Production must use Supabase. Set USE_SUPABASE=true.',
       });
     }
 

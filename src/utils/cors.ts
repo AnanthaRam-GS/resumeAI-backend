@@ -16,10 +16,14 @@ export const parseAllowedOrigins = (rawOrigins: string | undefined): string[] =>
 export const getCorsConfig = () => {
   const allowedOrigins = parseAllowedOrigins(env.CORS_ALLOWED_ORIGINS);
 
+  if (env.FRONTEND_URL && !allowedOrigins.includes(env.FRONTEND_URL)) {
+    allowedOrigins.push(env.FRONTEND_URL);
+  }
+
   return {
     origin: allowedOrigins,
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Authorization', 'Content-Type'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'x-api-key'],
     credentials: true,
   };
 };

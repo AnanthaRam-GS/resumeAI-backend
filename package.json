@@ -5,7 +5,7 @@
   "description": "ResumeAI MVP Backend API",
   "type": "module",
   "engines": {
-    "node": ">=24.0.0",
+    "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
   "scripts": {
@@ -40,6 +40,7 @@
     "s3:check": "tsx scripts/smoke-test-s3.ts",
     "db:diagnose": "node scripts/diagnose-supabase.mjs",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate:prod": "node dist/db/migrate.js",
     "db:reset": "tsx src/db/reset.ts",
     "db:seed": "tsx scripts/seed-local-db.ts"
   },
